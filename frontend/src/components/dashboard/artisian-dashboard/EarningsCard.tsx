@@ -1,6 +1,6 @@
 import React from 'react';
 import { TrendingUp } from 'lucide-react';
-import { EarningsData } from '../types';
+import { EarningsData } from './types';
 
 interface EarningsCardProps {
   earnings: EarningsData;

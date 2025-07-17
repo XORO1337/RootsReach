@@ -1,35 +1,103 @@
 const express = require('express');
 const UserController = require('../controllers/User_controller');
+const { 
+  authenticateToken, 
+  authorizeRoles, 
+  optionalAuth,
+  validateResourceOwnership,
+  requirePermission,
+  detectMaliciousRequests,
+  preventCrossUserAccess,
+  securityAuditLogger
+} = require('../middleware/auth');
 const router = express.Router();
 
-// Create user
-router.post('/', UserController.createUser);
+// Public routes (with optional authentication for enhanced data)
+router.get('/search/users', optionalAuth, UserController.searchUsers);
 
-// Get all users
-router.get('/', UserController.getAllUsers);
+// Admin-only routes
+router.post('/', 
+  authenticateToken, 
+  authorizeRoles('admin'), 
+  detectMaliciousRequests,
+  requirePermission('create', 'user'),
+  securityAuditLogger('create', 'user'),
+  UserController.createUser
+);
 
-// Get user by ID
-router.get('/:id', UserController.getUserById);
+router.get('/', 
+  authenticateToken, 
+  authorizeRoles('admin'), 
+  detectMaliciousRequests,
+  requirePermission('read', 'user'),
+  securityAuditLogger('read', 'user'),
+  UserController.getAllUsers
+);
 
-// Get user by email
-router.get('/email/:email', UserController.getUserByEmail);
+router.get('/role/:role', 
+  authenticateToken, 
+  authorizeRoles('admin'), 
+  detectMaliciousRequests,
+  requirePermission('read', 'user'),
+  securityAuditLogger('read', 'user'),
+  UserController.getUsersByRole
+);
 
-// Update user by ID
-router.put('/:id', UserController.updateUser);
+// Protected routes with resource ownership validation
+router.get('/:id', 
+  authenticateToken, 
+  detectMaliciousRequests,
+  validateResourceOwnership('user'),
+  requirePermission('read', 'user'),
+  securityAuditLogger('read', 'user'),
+  UserController.getUserById
+);
 
-// Delete user by ID
-router.delete('/:id', UserController.deleteUser);
+router.put('/:id', 
+  authenticateToken, 
+  detectMaliciousRequests,
+  validateResourceOwnership('user'),
+  requirePermission('update', 'user'),
+  securityAuditLogger('update', 'user'),
+  UserController.updateUser
+);
 
-// Get users by role
-router.get('/role/:role', UserController.getUsersByRole);
+// Admin-only sensitive operations
+router.delete('/:id', 
+  authenticateToken, 
+  authorizeRoles('admin'), 
+  detectMaliciousRequests,
+  requirePermission('delete', 'user'),
+  securityAuditLogger('delete', 'user'),
+  UserController.deleteUser
+);
 
-// Verify user email
-router.patch('/:id/verify', UserController.verifyUser);
+router.patch('/:id/verify', 
+  authenticateToken, 
+  authorizeRoles('admin'), 
+  detectMaliciousRequests,
+  requirePermission('update', 'user'),
+  securityAuditLogger('verify', 'user'),
+  UserController.verifyUser
+);
 
-// Update user address
-router.patch('/:id/address', UserController.updateUserAddress);
+// User-specific operations
+router.get('/email/:email', 
+  authenticateToken, 
+  authorizeRoles('admin'), 
+  detectMaliciousRequests,
+  requirePermission('read', 'user'),
+  securityAuditLogger('read', 'user'),
+  UserController.getUserByEmail
+);
 
-// Search users
-router.get('/search/users', UserController.searchUsers);
+router.patch('/:id/address', 
+  authenticateToken, 
+  detectMaliciousRequests,
+  validateResourceOwnership('user'),
+  requirePermission('update', 'user'),
+  securityAuditLogger('update', 'user'),
+  UserController.updateUserAddress
+);
 
 module.exports = router;

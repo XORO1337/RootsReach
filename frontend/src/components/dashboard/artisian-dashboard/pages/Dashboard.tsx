@@ -1,18 +1,23 @@
 import React from 'react';
-import Navbar from '../components/Navbar';
-import WelcomeSection from '../components/WelcomeSection';
-import StatsCards from '../components/StatsCards';
-import RawMaterials from '../components/RawMaterials';
-import OrdersTable from '../components/OrdersTable';
-import EarningsCard from '../components/EarningsCard';
-import ProductsCard from '../components/ProductsCard';
-import TutorialsCard from '../components/TutorialsCard';
-import SupportChat from '../components/SupportChat';
-import { rawMaterials, products, orders, tutorials, earningsData, dashboardStats } from '../data/mockData';
+import Navbar from '../Navbar';
+import WelcomeSection from '../WelcomeSection';
+import StatsCards from '../StatsCards';
+import RawMaterials from '../RawMaterials';
+import OrdersTable from '../OrdersTable';
+import EarningsCard from '../EarningsCard';
+import ProductsCard from '../ProductsCard';
+import TutorialsCard from '../TutorialsCard';
+import SupportChat from '../SupportChat';
+
+import { rawMaterials, products as initialProducts, orders, tutorials, earningsData, dashboardStats } from '../data/mockData';
 import { useAuth } from '../context/AuthContext';
+
+import { Product } from '../types';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
+
+  const [products, setProducts] = React.useState<Product[]>(initialProducts);
 
   // Event handlers
   const handleOrderMore = () => {
@@ -27,8 +32,11 @@ const Dashboard: React.FC = () => {
     console.log('Filter orders clicked');
   };
 
-  const handleAddNewProduct = () => {
-    console.log('Add new product clicked');
+  const handleAddNewProduct = (newProduct: Omit<Product, 'id'>) => {
+    setProducts((prev) => [
+      { ...newProduct, id: prev.length ? Math.max(...prev.map(p => p.id)) + 1 : 1 },
+      ...prev
+    ]);
   };
 
   const handleEditProduct = (productId: number) => {
@@ -36,7 +44,7 @@ const Dashboard: React.FC = () => {
   };
 
   const handleDeleteProduct = (productId: number) => {
-    console.log('Delete product:', productId);
+    setProducts((prev) => prev.filter(p => p.id !== productId));
   };
 
   const handlePlayTutorial = (tutorialId: number) => {

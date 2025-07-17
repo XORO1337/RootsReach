@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import {
   ChefHat, Package, Leaf, Eye, EyeOff,
-  Mail, Lock, User, Users, Heart, Sprout, ShoppingCart
+  Phone, Lock, User, Users, Heart, Sprout, ShoppingCart
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-const navigate = useNavigate();
 
 const SignUp = ({ onToggleMode }) => {
+  const navigate = useNavigate();
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [selectedRole, setSelectedRole] = useState('artisian');
+  const [selectedRole, setSelectedRole] = useState('artisan');
 
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
+    mobile: '',
+    otp: '',
     password: '',
     confirmPassword: ''
   });
@@ -25,19 +27,52 @@ const SignUp = ({ onToggleMode }) => {
     }));
   };
 
-  const handleSubmit = (e) => {
-  e.preventDefault();
-  console.log('SignUp submitted:', { ...formData, role: selectedRole });
+  const handleSubmit = async (e) => {
+    if (e) e.preventDefault();
 
-  if (selectedRole === 'artisian') {
-    navigate('/artisan-dashboard');
-  } else if (selectedRole === 'distributor') {
-    navigate('/distributor-dashboard');
-  } else if (selectedRole === 'buyer') {
-    navigate('/buyer-dashboard');
-  }
-};
+    // Basic validation for all fields
+    const { name, mobile, otp, password, confirmPassword } = formData;
+    if (!name || !mobile.match(/^[0-9]{10}$/) || !otp.match(/^[0-9]{6}$/) || !password || !confirmPassword) {
+      alert('Please fill all fields correctly.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      alert('Passwords do not match.');
+      return;
+    }
 
+    // Connect to backend
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          phone: mobile,
+          password,
+          role: selectedRole,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        alert('Signup successful!');
+        // Navigate based on role
+        if (selectedRole === 'artisan') {
+          navigate('/artisan-dashboard');
+        } else if (selectedRole === 'distributor') {
+          navigate('/distributor-dashboard');
+        } else if (selectedRole === 'buyer') {
+          navigate('/buyer-dashboard');
+        }
+      } else {
+        alert(data.message || 'Signup failed.');
+      }
+    } catch (err) {
+      alert('Network error. Please try again.');
+    }
+  };
 
   return (
     <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-xl p-6 border border-white/40 hover:shadow-2xl transition-all duration-300 relative overflow-hidden">
@@ -53,8 +88,8 @@ const SignUp = ({ onToggleMode }) => {
       </div>
 
       <div className="max-h-96 overflow-y-auto pr-1">
-        <form onSubmit={handleSubmit} className="space-y-3.5 relative z-10">
-          {/* Name field */}
+        <form className="space-y-3.5 relative z-10" onSubmit={handleSubmit}>
+          {/* Name */}
           <div className="relative">
             <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -68,16 +103,31 @@ const SignUp = ({ onToggleMode }) => {
             />
           </div>
 
-          {/* Email field */}
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          {/* Mobile Number */}
+          <div className="relative mb-3">
+            <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
-              type="email"
-              name="email"
-              value={formData.email}
+              type="tel"
+              name="mobile"
+              value={formData.mobile}
               onChange={handleInputChange}
               className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white/90 text-sm"
-              placeholder="Email address"
+              placeholder="Mobile number"
+              pattern="[0-9]{10}"
+              required
+            />
+          </div>
+          {/* OTP */}
+          <div className="relative">
+            <input
+              type="text"
+              name="otp"
+              value={formData.otp}
+              onChange={handleInputChange}
+              className="w-full pl-3 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white/90 text-sm"
+              placeholder="Enter OTP"
+              maxLength={6}
+              pattern="[0-9]{6}"
               required
             />
           </div>
@@ -126,20 +176,20 @@ const SignUp = ({ onToggleMode }) => {
 
           {/* Role Selector */}
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center space-x-1">
+            <label className="text-xs font-medium text-gray-700 mb-2 flex items-center space-x-1">
               <Users className="w-3 h-3 text-emerald-600" />
               <span>I am a:</span>
             </label>
+
             <div className="grid grid-cols-3 gap-2">
-              {/* ✅ Artisian */}
               <button
                 type="button"
-                onClick={() => setSelectedRole('artisian')}
-                className={`p-2.5 rounded-lg border-2 transition-all duration-300 transform hover:scale-105 ${
-                  selectedRole === 'artisian'
-                    ? 'border-emerald-500 bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-700 shadow-md'
-                    : 'border-gray-200 hover:border-gray-300 bg-white/70 hover:bg-white/90'
-                }`}
+              onClick={() => setSelectedRole('artisan')}
+              className={`p-2.5 rounded-lg border-2 transition-all duration-300 transform hover:scale-105 ${
+                selectedRole === 'artisan'
+                  ? 'border-emerald-500 bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-700 shadow-md'
+                  : 'border-gray-200 hover:border-gray-300 bg-white/70 hover:bg-white/90'
+              }`}
               >
                 <ChefHat className="w-4 h-4 mx-auto mb-1" />
                 <div className="text-xs font-medium">Artisian</div>
@@ -178,7 +228,7 @@ const SignUp = ({ onToggleMode }) => {
       <div className="relative z-10 mt-4 space-y-3">
         <button
           type="submit"
-          onClick={handleSubmit}
+          onClick={(e) => handleSubmit(e)}
           className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-2.5 px-4 rounded-lg font-medium hover:from-emerald-700 hover:to-teal-700 transform hover:scale-[1.02] transition-all duration-300 shadow-lg hover:shadow-xl relative overflow-hidden group text-sm"
         >
           <span className="relative z-10 flex items-center justify-center space-x-2">

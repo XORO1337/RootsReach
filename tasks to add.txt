@@ -5,3 +5,15 @@ async/await k use bhi krna hai
 
 
 file handling kro promises se it'll ease the work
+
+
+admin portal mein hum showcase kr skte hain ki kitni micro services running hIN
+
+Loadbalancing karni padegi
+
+
+
+**url pr token lgana hota hai hacking se bachane k liye agr hum microservices use krte hai hum microservices se no. of users and multiple services ko manage kr skte hain
+
+
+

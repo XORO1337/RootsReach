@@ -17,11 +17,12 @@ const AuthLayout = ({ children }) => {
         scrollbarWidth: 'none',
         msOverflowStyle: 'none'
       }}>
-        <style jsx>{`
-          .scrollbar-hide::-webkit-scrollbar {
-            display: none;
-          }
-        `}</style>
+        <style>{`
+  .myClass {
+    color: red;
+  }
+`}</style>
+
 
         {/* Compact Header */}
         <div className="relative z-10 pt-6 pb-4 flex-shrink-0">

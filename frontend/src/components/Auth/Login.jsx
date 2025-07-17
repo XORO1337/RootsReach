@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChefHat, Package, Leaf, Eye, EyeOff, Mail, Lock, Users, Heart, Sprout, ShoppingCart, Check } from 'lucide-react';
+import { ChefHat, Package, Leaf, Eye, EyeOff, Phone, Lock, Users, Heart, Sprout, ShoppingCart, Check } from 'lucide-react';
 
 const Login = ({ onToggleMode }) => {
   const [showPassword, setShowPassword] = useState(false);
@@ -7,8 +7,9 @@ const Login = ({ onToggleMode }) => {
   const [rememberMe, setRememberMe] = useState(false);
 
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    mobile: '',
+    password: '',
+    otp: ''
   });
 
   const handleInputChange = (e) => {
@@ -39,16 +40,31 @@ const Login = ({ onToggleMode }) => {
       <div className="max-h-96 overflow-y-auto pr-1">
         <form onSubmit={handleSubmit} className="space-y-3.5 relative z-10">
           <div>
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <div className="relative mb-3">
+              <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
-                type="email"
-                id="email"
-                name="email"
-                value={formData.email}
+                type="tel"
+                id="mobile"
+                name="mobile"
+                value={formData.mobile}
                 onChange={handleInputChange}
                 className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/90 text-sm"
-                placeholder="Email address"
+                placeholder="Mobile number"
+                pattern="[0-9]{10}"
+                required
+              />
+            </div>
+            <div className="relative">
+              <input
+                type="text"
+                id="otp"
+                name="otp"
+                value={formData.otp}
+                onChange={handleInputChange}
+                className="w-full pl-3 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white/90 text-sm"
+                placeholder="Enter OTP"
+                maxLength={6}
+                pattern="[0-9]{6}"
                 required
               />
             </div>
@@ -78,10 +94,13 @@ const Login = ({ onToggleMode }) => {
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center space-x-1">
-  <Users className="w-3 h-3 text-emerald-600" />
-  <span>I am a:</span>
+           <label className="block text-xs font-medium text-gray-700 mb-2">
+  <div className="flex items-center space-x-1">
+    <Users className="w-3 h-3 text-emerald-600" />
+    <span>I am a:</span>
+  </div>
 </label>
+
 
             <div className="grid grid-cols-3 gap-2">
               {/* Artisian Button */}
