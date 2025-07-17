@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
   ChefHat, Package, Leaf, Eye, EyeOff,
-  Phone, Lock, User, Users, Heart, Sprout, ShoppingCart
+  Phone, Lock, User, Users, Heart, Sprout, ShoppingCart,
+  CheckCircle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +12,10 @@ const SignUp = ({ onToggleMode }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState('artisan');
+  const [otpSent, setOtpSent] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [otpError, setOtpError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -21,10 +26,74 @@ const SignUp = ({ onToggleMode }) => {
   });
 
   const handleInputChange = (e) => {
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [name]: value
     }));
+
+    // Auto-send OTP when mobile number is 10 digits
+    if (name === 'mobile' && value.length === 10) {
+      handleSendOTP(value);
+    }
+  };
+
+  const handleSendOTP = async (phoneNumber) => {
+    try {
+      setIsLoading(true);
+      setOtpError('');
+      
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ phone: '+91' + phoneNumber }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setOtpSent(true);
+      } else {
+        setOtpError(data.message || 'Failed to send OTP');
+      }
+    } catch (error) {
+      setOtpError('Failed to send OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    try {
+      setIsLoading(true);
+      setOtpError('');
+
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: '+91' + formData.mobile,
+          otp: formData.otp
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setIsPhoneVerified(true);
+        setOtpError('');
+      } else {
+        setOtpError(data.message || 'Invalid OTP');
+      }
+    } catch (error) {
+      setOtpError('Failed to verify OTP. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -111,25 +180,54 @@ const SignUp = ({ onToggleMode }) => {
               name="mobile"
               value={formData.mobile}
               onChange={handleInputChange}
-              className="w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white/90 text-sm"
+              className="w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white/90 text-sm"
               placeholder="Mobile number"
               pattern="[0-9]{10}"
               required
             />
+            {formData.mobile.length === 10 && (
+              <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-emerald-500 w-4 h-4 animate-scale-check" />
+            )}
           </div>
           {/* OTP */}
           <div className="relative">
-            <input
-              type="text"
-              name="otp"
-              value={formData.otp}
-              onChange={handleInputChange}
-              className="w-full pl-3 pr-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white/90 text-sm"
-              placeholder="Enter OTP"
-              maxLength={6}
-              pattern="[0-9]{6}"
-              required
-            />
+            <div className="flex space-x-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  name="otp"
+                  value={formData.otp}
+                  onChange={handleInputChange}
+                  className="w-full pl-3 pr-10 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 bg-white/90 text-sm"
+                  placeholder="Enter OTP"
+                  maxLength={6}
+                  pattern="[0-9]{6}"
+                  required
+                />
+                {isPhoneVerified && (
+                  <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 text-emerald-500 w-4 h-4 animate-scale-check" />
+                )}
+              </div>
+              {otpSent && !isPhoneVerified && (
+                <button
+                  type="button"
+                  onClick={handleVerifyOTP}
+                  disabled={isLoading || formData.otp.length !== 6}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300
+                    ${isLoading 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : formData.otp.length === 6
+                        ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                >
+                  {isLoading ? 'Verifying...' : 'Verify OTP'}
+                </button>
+              )}
+            </div>
+            {otpError && (
+              <p className="text-red-500 text-xs mt-1">{otpError}</p>
+            )}
           </div>
 
           {/* Password */}
