@@ -25,6 +25,9 @@ const SignUp = ({ onToggleMode }) => {
     confirmPassword: ''
   });
 
+  // Simulated OTP for testing (in real app, this would come from backend)
+  const [simulatedOTP, setSimulatedOTP] = useState('');
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -43,21 +46,16 @@ const SignUp = ({ onToggleMode }) => {
       setIsLoading(true);
       setOtpError('');
       
-      const response = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phone: '+91' + phoneNumber }),
-      });
-
-      const data = await response.json();
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      if (data.success) {
-        setOtpSent(true);
-      } else {
-        setOtpError(data.message || 'Failed to send OTP');
-      }
+      // Generate a random 6-digit OTP
+      const generatedOTP = Math.floor(100000 + Math.random() * 900000).toString();
+      setSimulatedOTP(generatedOTP);
+      
+      console.log('Generated OTP (for testing):', generatedOTP);
+      setOtpSent(true);
+      
     } catch (error) {
       setOtpError('Failed to send OTP. Please try again.');
     } finally {
@@ -70,24 +68,14 @@ const SignUp = ({ onToggleMode }) => {
       setIsLoading(true);
       setOtpError('');
 
-      const response = await fetch('/api/auth/verify-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          phone: '+91' + formData.mobile,
-          otp: formData.otp
-        }),
-      });
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (formData.otp === simulatedOTP) {
         setIsPhoneVerified(true);
         setOtpError('');
       } else {
-        setOtpError(data.message || 'Invalid OTP');
+        setOtpError('Invalid OTP');
       }
     } catch (error) {
       setOtpError('Failed to verify OTP. Please try again.');
@@ -109,37 +97,20 @@ const SignUp = ({ onToggleMode }) => {
       alert('Passwords do not match.');
       return;
     }
+    if (!isPhoneVerified) {
+      alert('Please verify your phone number first.');
+      return;
+    }
 
-    // Connect to backend
-    try {
-      const response = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name,
-          phone: mobile,
-          password,
-          role: selectedRole,
-        }),
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        alert('Signup successful!');
-        // Navigate based on role
-        if (selectedRole === 'artisan') {
-          navigate('/artisan-dashboard');
-        } else if (selectedRole === 'distributor') {
-          navigate('/distributor-dashboard');
-        } else if (selectedRole === 'buyer') {
-          navigate('/buyer-dashboard');
-        }
-      } else {
-        alert(data.message || 'Signup failed.');
-      }
-    } catch (err) {
-      alert('Network error. Please try again.');
+    // Simulate successful signup
+    alert('Signup successful! (Backend integration pending)');
+    // Navigate based on role
+    if (selectedRole === 'artisan') {
+      navigate('/artisan-dashboard');
+    } else if (selectedRole === 'distributor') {
+      navigate('/distributor-dashboard');
+    } else if (selectedRole === 'buyer') {
+      navigate('/buyer-dashboard');
     }
   };
 

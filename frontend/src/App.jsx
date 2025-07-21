@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { AuthLayout, Login, SignUp } from './components/auth';
-import DistributorDashboard from './components/dashboard/distributor-dashboard/components/DistributorDashboard';
+import SignUp from './components/Auth/SignUp';
+import Login from './components/Auth/Login';
+import AuthLayout from './components/Auth/AuthLayout';
 import { Routes, Route } from 'react-router-dom';
 
 
@@ -15,6 +16,8 @@ import EarningsCard from './components/dashboard/artisian-dashboard/EarningsCard
 import ProductsCard from './components/dashboard/artisian-dashboard/ProductsCard';
 import TutorialsCard from './components/dashboard/artisian-dashboard/TutorialsCard';
 import SupportChat from './components/dashboard/artisian-dashboard/SupportChat';
+import DistributorDashboard from './components/dashboard/distributor-dashboard/DistributorDashboard';
+import AdminDashboard from './components/dashboard/admin-dashboard/AdminDashboard';
 
 import {
   rawMaterials,
@@ -108,7 +111,7 @@ function App() {
 
       <Route path="/artisan-dashboard" element={<ArtisanDashboard />} />
       <Route path="/distributor-dashboard" element={<DistributorDashboard />} />
-      
+      <Route path="/admin-dashboard" element={<AdminDashboard />} />
 
 
     </Routes>

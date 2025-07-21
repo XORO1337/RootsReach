@@ -4,6 +4,8 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import Dashboard from './pages/Dashboard';
 import { AuthProvider, useAuth } from './context/AuthContext';
+console.log("ArtisanDashboard Rendered");
+
 
 
 // Protected Route Component

@@ -180,10 +180,7 @@ const userSchema = new Schema({
 });
 
 // Index for faster queries
-userSchema.index({ email: 1 });
-userSchema.index({ phone: 1 });
-userSchema.index({ role: 1 });
-userSchema.index({ googleId: 1 });
+// Removed duplicate index definitions. Only use index: true in schema fields.
 
 // Virtual for account locked
 userSchema.virtual('isLocked').get(function() {
