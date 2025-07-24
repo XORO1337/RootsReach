@@ -17,7 +17,7 @@ import ProductsCard from './components/dashboard/artisian-dashboard/ProductsCard
 import TutorialsCard from './components/dashboard/artisian-dashboard/TutorialsCard';
 import SupportChat from './components/dashboard/artisian-dashboard/SupportChat';
 import DistributorDashboard from './components/dashboard/distributor-dashboard/DistributorDashboard';
-import AdminDashboard from './components/dashboard/admin-dashboard/AdminDashboard';
+import AdminDashboard from './components/dashboard/admin-dashboard/AdminDashboard.tsx';
 
 import {
   rawMaterials,

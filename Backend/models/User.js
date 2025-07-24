@@ -66,7 +66,7 @@ const userSchema = new Schema({
     unique: true,
     sparse: true,
     trim: true,
-    match: [/^\+91[6-9]\d{9}$/, 'Please enter a valid phone number in E.164 format (+91xxxxxxxxxx)']
+    match: [/^[+]?[1-9]\d{1,14}$/, 'Please enter a valid phone number']
   },
   role: {
     type: String,
@@ -165,6 +165,24 @@ const userSchema = new Schema({
   }],
   otpCode: String,
   otpExpires: Date,
+  otpAttempts: {
+    type: Number,
+    default: 0
+  },
+  lastOtpSentAt: Date,
+  otpResendCount: {
+    type: Number,
+    default: 0
+  },
+  lastResendDate: Date,
+  // Enhanced OTP tracking fields
+  otpSendCount: {
+    type: Number,
+    default: 0
+  },
+  lastOtpSentDate: Date,
+  otpLockUntil: Date,
+  phoneVerifiedAt: Date,
   loginAttempts: {
     type: Number,
     default: 0
@@ -180,7 +198,10 @@ const userSchema = new Schema({
 });
 
 // Index for faster queries
-// Removed duplicate index definitions. Only use index: true in schema fields.
+userSchema.index({ email: 1 });
+userSchema.index({ phone: 1 });
+userSchema.index({ role: 1 });
+userSchema.index({ googleId: 1 });
 
 // Virtual for account locked
 userSchema.virtual('isLocked').get(function() {

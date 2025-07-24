@@ -1,14 +1,11 @@
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '.env') });
-
-
 const express = require('express');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+require('dotenv').config();
 
-// Import route
+// Import routes
 const authRoutes = require('./routes/Auth_route');
 const userRoutes = require('./routes/User_route');
 const artisanRoutes = require('./routes/Artisan_route');

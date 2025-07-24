@@ -23,22 +23,9 @@ const validateUserRegistration = [
     .withMessage('Name can only contain letters and spaces'),
     
   body('phone')
-    .isMobilePhone(['en-IN'])
-    .withMessage('Please provide a valid Indian phone number')
-    .customSanitizer((value) => {
-      // Normalize phone number to E.164 format for India
-      if (value) {
-        const cleaned = value.replace(/\D/g, ''); // Remove all non-digits
-        if (cleaned.length === 10 && cleaned.startsWith('9')) {
-          return '+91' + cleaned; // Add India country code
-        } else if (cleaned.length === 12 && cleaned.startsWith('91')) {
-          return '+' + cleaned; // Add + prefix
-        } else if (cleaned.length === 13 && cleaned.startsWith('919')) {
-          return '+' + cleaned; // Add + prefix
-        }
-      }
-      return value;
-    }),
+    .matches(/^[+]?[1-9]\d{1,14}$/)
+    .withMessage('Please provide a valid phone number (format: +918851929990 or 918851929990)')
+    .trim(),
     
   body('password')
     .isLength({ min: 8 })
@@ -49,58 +36,6 @@ const validateUserRegistration = [
   body('role')
     .isIn(['customer', 'artisan', 'distributor'])
     .withMessage('Role must be customer, artisan, or distributor'),
-
-  // Artisan-specific fields (optional, only validated if role is artisan)
-  body('bio')
-    .optional()
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage('Bio must not exceed 500 characters'),
-    
-  body('region')
-    .if(body('role').equals('artisan'))
-    .notEmpty()
-    .withMessage('Region is required for artisan registration')
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Region must be between 2 and 100 characters'),
-    
-  body('skills')
-    .optional()
-    .isArray()
-    .withMessage('Skills must be an array'),
-    
-  body('skills.*')
-    .optional()
-    .trim()
-    .isLength({ min: 1, max: 50 })
-    .withMessage('Each skill must be between 1 and 50 characters'),
-
-  // Distributor-specific fields (optional, only validated if role is distributor)
-  body('businessName')
-    .if(body('role').equals('distributor'))
-    .notEmpty()
-    .withMessage('Business name is required for distributor registration')
-    .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Business name must be between 2 and 100 characters'),
-    
-  body('licenseNumber')
-    .optional()
-    .trim()
-    .isLength({ max: 50 })
-    .withMessage('License number must not exceed 50 characters'),
-    
-  body('distributionAreas')
-    .optional()
-    .isArray()
-    .withMessage('Distribution areas must be an array'),
-    
-  body('distributionAreas.*')
-    .optional()
-    .trim()
-    .isLength({ min: 1, max: 50 })
-    .withMessage('Each distribution area must be between 1 and 50 characters'),
     
   handleValidationErrors
 ];
@@ -109,22 +44,9 @@ const validateUserRegistration = [
 const validateUserLogin = [
   body('phone')
     .optional()
-    .isMobilePhone(['en-IN'])
-    .withMessage('Please provide a valid Indian phone number')
-    .customSanitizer((value) => {
-      // Normalize phone number to E.164 format for India
-      if (value) {
-        const cleaned = value.replace(/\D/g, ''); // Remove all non-digits
-        if (cleaned.length === 10 && cleaned.startsWith('9')) {
-          return '+91' + cleaned; // Add India country code
-        } else if (cleaned.length === 12 && cleaned.startsWith('91')) {
-          return '+' + cleaned; // Add + prefix
-        } else if (cleaned.length === 13 && cleaned.startsWith('919')) {
-          return '+' + cleaned; // Add + prefix
-        }
-      }
-      return value;
-    }),
+    .matches(/^[+]?[1-9]\d{1,14}$/)
+    .withMessage('Please provide a valid phone number')
+    .trim(),
     
   body('email')
     .optional()
@@ -147,53 +69,27 @@ const validateUserLogin = [
   handleValidationErrors
 ];
 
-// OTP phone validation (for sending OTP)
-const validateOTPPhone = [
-  body('phone')
-    .isMobilePhone(['en-IN'])
-    .withMessage('Please provide a valid Indian phone number')
-    .customSanitizer((value) => {
-      // Normalize phone number to E.164 format for India
-      if (value) {
-        const cleaned = value.replace(/\D/g, ''); // Remove all non-digits
-        if (cleaned.length === 10 && cleaned.startsWith('9')) {
-          return '+91' + cleaned; // Add India country code
-        } else if (cleaned.length === 12 && cleaned.startsWith('91')) {
-          return '+' + cleaned; // Add + prefix
-        } else if (cleaned.length === 13 && cleaned.startsWith('919')) {
-          return '+' + cleaned; // Add + prefix
-        }
-      }
-      return value;
-    }),
-    
-  handleValidationErrors
-];
-
 // OTP validation
 const validateOTP = [
   body('phone')
-    .isMobilePhone(['en-IN'])
-    .withMessage('Please provide a valid Indian phone number')
-    .customSanitizer((value) => {
-      // Normalize phone number to E.164 format for India
-      if (value) {
-        const cleaned = value.replace(/\D/g, ''); // Remove all non-digits
-        if (cleaned.length === 10 && cleaned.startsWith('9')) {
-          return '+91' + cleaned; // Add India country code
-        } else if (cleaned.length === 12 && cleaned.startsWith('91')) {
-          return '+' + cleaned; // Add + prefix
-        } else if (cleaned.length === 13 && cleaned.startsWith('919')) {
-          return '+' + cleaned; // Add + prefix
-        }
-      }
-      return value;
-    }),
+    .matches(/^[+]?[1-9]\d{1,14}$/)
+    .withMessage('Please provide a valid phone number')
+    .trim(),
     
   body('otp')
     .isLength({ min: 4, max: 6 })
     .isNumeric()
     .withMessage('OTP must be a 4-6 digit number'),
+    
+  handleValidationErrors
+];
+
+// Phone validation only (for send-otp and resend-otp)
+const validatePhoneOnly = [
+  body('phone')
+    .matches(/^[+]?[1-9]\d{1,14}$/)
+    .withMessage('Please provide a valid phone number')
+    .trim(),
     
   handleValidationErrors
 ];
@@ -313,8 +209,9 @@ const validateProfileUpdate = [
     
   body('phone')
     .optional()
-    .isMobilePhone(['en-IN'])
-    .withMessage('Please provide a valid phone number'),
+    .matches(/^[+]?[1-9]\d{1,14}$/)
+    .withMessage('Please provide a valid phone number')
+    .trim(),
     
   handleValidationErrors
 ];
@@ -375,8 +272,8 @@ const validateSearch = [
 module.exports = {
   validateUserRegistration,
   validateUserLogin,
-  validateOTPPhone,
   validateOTP,
+  validatePhoneOnly,
   validateAddress,
   validateIdentityDocument,
   validateAadhaarNumber,

@@ -21,3 +21,45 @@ Loadbalancing karni padegi
  ---------------------------------Docker session----------------------------------------------
 
  Devops pipeline techstack 
+
+
+ Devops is a set of practice that combines soft dev and its operationfocused on automatinh and streamlining thr software 
+ delivery process. the goal of devops is to enable reliable and faster software releases by promoting close collab between Dev team and Ops team
+
+
+
+
+(Pillars of Devops) Components of Devops:
+            -Source Code Mgt (SCM)- manage
+            -Done via Branching and pulling and pushing like github
+            -Count. Integeration- its a practice where Dev Frequently commit code to the shared repo.(jenkins).
+            it helps in early detection of Integeration issues redcing debugging time;.
+            -count. development -Automates the release of code produciton env. IT automatically 
+            tests 
+
+******************************************************************************************************
+
+
+aws pr kaam kr rhe ho to teraform ko bhi setup krna pdta hai taaki hum agr aws se azure mein jaana chahtehain
+to ek hi comand se transfer kr skt hain.
+
+
+**************************************************************************************************************************
+
+sonarcqube
+
+-----> Docker
+
+docker components
+            -Dockerfile
+            you write a Dockerfile defining your app's environment:
+            Base image(e.g., ubuntu,Node.js,Alpine)
+            Software dependencies
+            Files to copy
+
+
+
+Nesting of docker can be done by kubernetes
+
+
+.copy .  -copy paste in docker
