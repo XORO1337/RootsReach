@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Package, ShoppingBag, TrendingUp, Settings, Bell, Search, MoreHorizontal } from 'lucide-react';
+import { Users, Package, ShoppingBag, TrendingUp, Settings, Bell, Search, MoreHorizontal, LogOut } from 'lucide-react';
 import { adminAPI } from '../../../services/api';
 
 const AdminDashboard = () => {
@@ -14,6 +14,13 @@ const AdminDashboard = () => {
   ]);
   const [recentUsers, setRecentUsers] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
+
+  const handleLogout = () => {
+    // Clear all authentication data
+    localStorage.clear();
+    // Redirect to home page
+    window.location.href = '/';
+  };
 
   // Fetch dashboard data
   useEffect(() => {
@@ -132,6 +139,13 @@ const AdminDashboard = () => {
               </button>
               <button className="p-2 text-gray-400 hover:text-gray-600">
                 <Settings className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
           </div>

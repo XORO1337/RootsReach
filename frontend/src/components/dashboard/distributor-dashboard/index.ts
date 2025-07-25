@@ -1,31 +1,8 @@
-export interface Product {
-  id: string;
-  name: string;
-  image: string;
-  pricePerUnit: number;
-  availableStock: number;
-  artisan: string;
-  category: string;
-  description: string;
-}
-
-export interface Order {
-  id: string;
-  productName: string;
-  productId: string;
-  quantity: number;
-  orderDate: string;
-  totalAmount: number;
-  status: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-  artisan: string;
-}
-
-export interface OrderFilter {
-  status: 'all' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-  dateRange: 'all' | '7days' | '30days' | '90days';
-}
-
-export interface BulkOrderRequest {
-  productId: string;
-  quantity: number;
-}
+export { default as DistributorDashboard } from './components/DistributorDashboard';
+export { default as Navigation } from './components/Navigation';
+export { default as ProductCatalog } from './components/ProductCatalog';
+export { default as ProductCard } from './components/ProductCard';
+export { default as OrderHistory } from './components/OrderHistory';
+export { default as Support } from './components/Support';
+export * from './types';
+export * from './data/mockData';
