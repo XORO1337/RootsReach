@@ -1,5 +1,5 @@
 import React from 'react';
-import ProductCard from '../../shared/ProductCard';
+import ProductCard from '../../../shared/ProductCard';
 
 const FeaturedProducts = ({ products }) => {
   return (

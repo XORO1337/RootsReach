@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import ProductCard from '../../shared/ProductCard';
+import ProductCard from '../../../shared/ProductCard';
 import { Heart } from 'lucide-react';
 
 const Wishlist = ({ wishlistItems, onRemoveFromWishlist, onAddToCart }) => {

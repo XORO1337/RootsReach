@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
- "scripts": {
-  "frontend": "cd frontend && npm start",
-  "backend": "cd backend && nodemon app.js",
-  "dev": "concurrently \"npm run frontend\" \"npm run backend\""
+  "scripts": {
+    "frontend": "cd frontend && npm start",
+    "backend": "cd backend && nodemon app.js",
+    "dev": "concurrently \"npm run frontend\" \"npm run backend\""
   },
   "repository": {
     "type": "git",

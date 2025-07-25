@@ -1,5 +1,5 @@
 import React from 'react';
-import TrustBadge from '../../shared/TrustBadge';
+import TrustBadge from '../../../../shared/TrustBadge';
 import { Quote } from 'lucide-react';
 
 const TestimonialsStats = ({ testimonials, stats }) => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import ArtisanCard from '../../shared/ArtisanCard';
+import ArtisanCard from '../../../shared/ArtisanCard';
 
 const MeetArtisans = ({ artisans }) => {
   return (
