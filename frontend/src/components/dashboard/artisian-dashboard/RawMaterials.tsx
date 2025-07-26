@@ -29,6 +29,7 @@ const RawMaterials: React.FC<RawMaterialsProps> = ({ materials, onOrderMore }) =
         <table className="w-full">
           <thead>
             <tr className="border-b border-indigo-100">
+              <th className="text-left py-3 px-4 font-medium text-gray-600">Image</th>
               <th className="text-left py-3 px-4 font-medium text-gray-600">Material</th>
               <th className="text-left py-3 px-4 font-medium text-gray-600">Quantity</th>
               <th className="text-left py-3 px-4 font-medium text-gray-600">Unit</th>
@@ -37,6 +38,21 @@ const RawMaterials: React.FC<RawMaterialsProps> = ({ materials, onOrderMore }) =
           <tbody>
             {materials.map((material) => (
               <tr key={material.id} className="border-b border-indigo-50 hover:bg-indigo-50/50 transition-colors">
+                <td className="py-3 px-4">
+                  <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100">
+                    {material.image ? (
+                      <img 
+                        src={material.image} 
+                        alt={material.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-indigo-200 flex items-center justify-center">
+                        <PackagePlus className="w-6 h-6 text-indigo-600" />
+                      </div>
+                    )}
+                  </div>
+                </td>
                 <td className="py-3 px-4 text-gray-800">{material.name}</td>
                 <td className="py-3 px-4 text-gray-800">{material.quantity}</td>
                 <td className="py-3 px-4 text-gray-800">{material.unit}</td>

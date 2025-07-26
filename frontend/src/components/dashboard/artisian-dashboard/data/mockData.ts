@@ -1,10 +1,42 @@
 import { RawMaterial, Product, Order, Tutorial, EarningsData, DashboardStats } from '../types';
 
 export const rawMaterials: RawMaterial[] = [
-  { id: 1, name: 'Organic Cotton Yarn', quantity: '2.5 kg', status: 'Delivered', date: '2025-01-10' },
-  { id: 2, name: 'Natural Wool', quantity: '1 kg', status: 'Pending', date: '2025-01-15' },
-  { id: 3, name: 'Bamboo Fiber', quantity: '3 kg', status: 'In Transit', date: '2025-01-12' },
-  { id: 4, name: 'Silk Thread', quantity: '500g', status: 'Delivered', date: '2025-01-08' }
+  { 
+    id: 1, 
+    name: 'Organic Cotton Yarn', 
+    quantity: '2.5', 
+    unit: 'kg',
+    status: 'Delivered', 
+    date: '2025-01-10',
+    image: 'https://images.pexels.com/photos/6156678/pexels-photo-6156678.jpeg?auto=compress&cs=tinysrgb&w=400'
+  },
+  { 
+    id: 2, 
+    name: 'Natural Wool', 
+    quantity: '1', 
+    unit: 'kg',
+    status: 'Pending', 
+    date: '2025-01-15',
+    image: 'https://images.pexels.com/photos/6765363/pexels-photo-6765363.jpeg?auto=compress&cs=tinysrgb&w=400'
+  },
+  { 
+    id: 3, 
+    name: 'Bamboo Fiber', 
+    quantity: '3', 
+    unit: 'kg',
+    status: 'In Transit', 
+    date: '2025-01-12',
+    image: 'https://images.pexels.com/photos/7679669/pexels-photo-7679669.jpeg?auto=compress&cs=tinysrgb&w=400'
+  },
+  { 
+    id: 4, 
+    name: 'Silk Thread', 
+    quantity: '500', 
+    unit: 'g',
+    status: 'Delivered', 
+    date: '2025-01-08',
+    image: 'https://images.pexels.com/photos/7679720/pexels-photo-7679720.jpeg?auto=compress&cs=tinysrgb&w=400'
+  }
 ];
 
 export const products: Product[] = [

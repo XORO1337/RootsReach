@@ -5,6 +5,7 @@ export interface RawMaterial {
   status: 'Delivered' | 'Pending' | 'In Transit';
   date: string;
   unit: string; 
+  image?: string; // Optional image URL for raw material
 }
 
 export interface Product {

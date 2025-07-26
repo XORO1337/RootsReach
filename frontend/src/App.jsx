@@ -114,6 +114,8 @@ function App() {
       <Route path="/artisan-dashboard" element={<ArtisanDashboard />} />
       <Route path="/distributor-dashboard" element={<DistributorDashboard />} />
       <Route path="/admin-dashboard" element={<AdminDashboard />} />
+      <Route path="/home-dashboard" element={<HomeDashboard />} />
+      <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
 
 
     </Routes>

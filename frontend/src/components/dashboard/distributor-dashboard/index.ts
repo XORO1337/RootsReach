@@ -1,4 +1,4 @@
-export { default as DistributorDashboard } from './components/DistributorDashboard';
+export { default as DistributorDashboard } from './DistributorDashboard';
 export { default as Navigation } from './components/Navigation';
 export { default as ProductCatalog } from './components/ProductCatalog';
 export { default as ProductCard } from './components/ProductCard';

@@ -2,6 +2,10 @@ import React from 'react';
 import { ArrowRight, Star, Users, Shield } from 'lucide-react';
 
 const HeroSection = () => {
+  const handleShopNow = () => {
+    window.location.href = '/buyer-dashboard';
+  };
+
   return (
     <section className="bg-gradient-to-br from-blue-50 to-indigo-100 py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -39,7 +43,10 @@ const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-4">
-              <button className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2">
+              <button 
+                onClick={handleShopNow}
+                className="bg-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center space-x-2"
+              >
                 <span>Shop Now</span>
                 <ArrowRight className="w-5 h-5" />
               </button>

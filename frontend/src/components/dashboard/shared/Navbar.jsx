@@ -1,9 +1,24 @@
-import React from 'react';
-import { ShoppingCart, Heart, Search, User, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ShoppingCart, Heart, Search, User, LogOut, Home, Settings } from 'lucide-react';
 
 const Navbar = () => {
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
   const handleLogout = () => {
     localStorage.clear();
+    window.location.href = '/';
+  };
+
+  const handleHomeClick = () => {
+    window.location.href = '/home-dashboard';
+  };
+
+  const handleProfile = () => {
+    // Toggle profile dropdown or navigate to profile page
+    setShowProfileMenu(!showProfileMenu);
+  };
+
+  const handleLogin = () => {
     window.location.href = '/';
   };
 
@@ -30,6 +45,13 @@ const Navbar = () => {
 
           {/* Navigation Icons */}
           <div className="flex items-center space-x-4">
+            <button 
+              onClick={handleHomeClick}
+              className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+              title="Home"
+            >
+              <Home className="w-6 h-6" />
+            </button>
             <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors">
               <Heart className="w-6 h-6" />
             </button>
@@ -39,16 +61,58 @@ const Navbar = () => {
                 3
               </span>
             </button>
-            <button className="p-2 text-gray-600 hover:text-blue-600 transition-colors">
-              <User className="w-6 h-6" />
-            </button>
-            <button 
-              onClick={handleLogout}
-              className="p-2 text-gray-600 hover:text-red-600 transition-colors"
-              title="Logout"
-            >
-              <LogOut className="w-6 h-6" />
-            </button>
+            
+            {/* Profile/User Menu */}
+            <div className="relative">
+              <button 
+                onClick={handleProfile}
+                className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                title="Profile & Account"
+              >
+                <User className="w-6 h-6" />
+              </button>
+              
+              {/* Profile Dropdown Menu */}
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        // Navigate to buyer dashboard
+                        window.location.href = '/buyer-dashboard';
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <User className="w-4 h-4 mr-3" />
+                      My Profile
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        // Navigate to settings
+                        console.log('Navigate to settings');
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <Settings className="w-4 h-4 mr-3" />
+                      Settings
+                    </button>
+                    <hr className="my-1" />
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        handleLogout();
+                      }}
+                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <LogOut className="w-4 h-4 mr-3" />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
