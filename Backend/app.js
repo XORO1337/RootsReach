@@ -67,21 +67,45 @@ const corsOptions = {
       'http://localhost:3000',
       'http://localhost:3001',
       'http://localhost:5173',
+      'https://cautious-zebra-x5549r5475j6f979-5173.app.github.dev',
+      'https://cautious-zebra-x5549r5475j6f979-5000.app.github.dev',
       process.env.CLIENT_URL
     ].filter(Boolean);
     
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
+    // Check for GitHub Codespaces patterns (more flexible matching)
+    if (origin && (origin.includes('github.dev') || origin.includes('gitpod.io') || origin.includes('localhost'))) {
+      return callback(null, true);
+    }
+    
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
+      console.warn(`🚫 CORS: Origin ${origin} not allowed. Allowed origins:`, allowedOrigins);
+      // In development, allow anyway but log the warning
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔧 Development mode: Allowing CORS for:', origin);
+        return callback(null, true);
+      }
       callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'Cache-Control']
+  allowedHeaders: [
+    'Origin', 
+    'X-Requested-With', 
+    'Content-Type', 
+    'Accept', 
+    'Authorization', 
+    'Cache-Control',
+    'X-Dev-Key'
+  ],
+  exposedHeaders: ['X-Audit-Trail'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false
 };
 
 app.use(cors(corsOptions));
@@ -259,7 +283,7 @@ app.use((req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 5000;
 
 // Start server
 const startServer = async () => {

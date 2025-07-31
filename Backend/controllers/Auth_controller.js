@@ -144,6 +144,12 @@ class AuthController {
 
   // Google OAuth login initiation
   static initiateGoogleAuth(req, res, next) {
+    // Store the selected role in session if provided
+    const { role } = req.query;
+    if (role) {
+      req.session.selectedRole = role;
+    }
+    
     passport.authenticate('google', {
       scope: ['profile', 'email']
     })(req, res, next);
@@ -153,20 +159,44 @@ class AuthController {
   static async handleGoogleCallback(req, res, next) {
     passport.authenticate('google', { session: false }, async (err, user) => {
       if (err) {
-        return res.redirect(`${process.env.CLIENT_URL}/login?error=oauth_failed`);
+        console.error('Google OAuth error:', err);
+        return res.redirect(`${process.env.CLIENT_URL}/auth/callback?error=oauth_failed`);
       }
 
       if (!user) {
-        return res.redirect(`${process.env.CLIENT_URL}/login?error=oauth_denied`);
+        return res.redirect(`${process.env.CLIENT_URL}/auth/callback?error=oauth_denied`);
       }
 
       try {
-        // Generate tokens
-        const accessToken = generateAccessToken({ userId: user._id, role: user.role });
+        // Check if role was pre-selected during OAuth initiation
+        const selectedRole = req.session?.selectedRole || 'customer';
+        console.log('🎯 OAuth Callback - Selected Role:', selectedRole);
+        console.log('🎯 OAuth Callback - User is new:', user._isNewUser);
+        console.log('🎯 OAuth Callback - Current user role:', user.role);
+        
+        // Update user role if it was selected (for both new and existing users)
+        if (selectedRole && selectedRole !== 'customer') {
+          console.log('🔄 Updating user role from', user.role, 'to', selectedRole);
+          user.role = selectedRole;
+          await user.save();
+        }
+
+        // Generate tokens with enhanced payload
+        const accessToken = generateAccessToken({ 
+          userId: user._id, 
+          role: user.role,
+          sessionId: Date.now().toString() // Include session identifier
+        });
         const refreshToken = generateRefreshToken({ userId: user._id });
 
-        // Store refresh token
-        user.refreshTokens.push({ token: refreshToken });
+        // Store refresh token with metadata
+        user.refreshTokens.push({ 
+          token: refreshToken,
+          createdAt: new Date(),
+          userAgent: req.get('User-Agent'),
+          ipAddress: req.ip
+        });
+        user.lastLogin = new Date();
         await user.save();
 
         // Set HTTP-only cookie for refresh token
@@ -177,17 +207,27 @@ class AuthController {
           sameSite: 'strict'
         });
 
-        // Redirect based on role
-        let redirectUrl = `${process.env.CLIENT_URL}/`;
-        if (user.role === 'artisan' || user.role === 'distributor') {
-          redirectUrl = `${process.env.CLIENT_URL}/dashboard`;
-        }
+        // Redirect to frontend OAuth callback with token and user data
+        const userData = {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          isEmailVerified: user.isEmailVerified,
+          isPhoneVerified: user.isPhoneVerified,
+          authProvider: user.authProvider
+        };
 
-        res.redirect(`${redirectUrl}?token=${accessToken}`);
+        console.log('🎯 Final user data being sent to frontend:', userData);
+        console.log('🎯 User role before redirect:', userData.role);
+        
+        const callbackUrl = `${process.env.CLIENT_URL}/auth/callback?token=${accessToken}&user=${encodeURIComponent(JSON.stringify(userData))}`;
+        console.log('🔗 Redirecting to:', callbackUrl);
+        res.redirect(callbackUrl);
 
       } catch (error) {
         console.error('Google OAuth callback error:', error);
-        res.redirect(`${process.env.CLIENT_URL}/login?error=oauth_failed`);
+        res.redirect(`${process.env.CLIENT_URL}/auth/callback?error=oauth_failed`);
       }
     })(req, res, next);
   }

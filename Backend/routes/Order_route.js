@@ -1,48 +1,41 @@
 const express = require('express');
-const OrderController = require('../controllers/Order_controller');
+const OrderController = require('../controllers/Order_controller.js');
+const { authenticateToken } = require('../middleware/auth');
 const router = express.Router();
 
-// Basic CRUD Operations
-router.post('/', OrderController.createOrder);
-router.get('/', OrderController.getAllOrders);
+// Order creation and management
+router.post('/', authenticateToken, OrderController.createOrder);
 
-// Order number operations
-router.get('/order-number/:orderNumber', OrderController.getOrderByNumber);
-
-// User-specific operations
-router.get('/buyer/:buyerId', OrderController.getOrdersByBuyer);
-router.get('/artisan/:artisanId', OrderController.getOrdersByArtisan);
-
-// Status-based operations
-router.get('/status/:status', OrderController.getOrdersByStatus);
-
-// Payment operations
-router.get('/payment-status/:paymentStatus', OrderController.getOrdersByPaymentStatus);
-
-// Shipping operations
-router.get('/shipping/pending', OrderController.getPendingShipments);
+// Search and filter routes (must come before ID-based routes)
+router.get('/search', authenticateToken, OrderController.searchOrders);
+router.get('/status/:status', authenticateToken, OrderController.getOrdersByStatus);
+router.get('/order-number/:orderNumber', authenticateToken, OrderController.getOrderByNumber);
 
 // Analytics and reporting
-router.get('/analytics/total-amount', OrderController.getTotalOrderAmount);
-router.get('/analytics/by-date-range', OrderController.getOrdersByDateRange);
-router.get('/analytics/summary', OrderController.getOrderSummary);
+router.get('/analytics/total', authenticateToken, OrderController.getTotalOrderAmount);
+router.get('/analytics/date-range', authenticateToken, OrderController.getOrdersByDateRange);
+router.get('/analytics/summary', authenticateToken, OrderController.getOrderSummary);
 
-// Search operations
-router.get('/search/orders', OrderController.searchOrders);
+// Order listing and filtering
+router.get('/artisan', authenticateToken, OrderController.getArtisanOrders);
+router.get('/distributor', authenticateToken, OrderController.getDistributorOrders);
+router.get('/buyer/:buyerId', authenticateToken, OrderController.getOrdersByBuyer);
 
-// ID-based operations (must come after specific routes)
-router.get('/:id', OrderController.getOrderById);
-router.put('/:id', OrderController.updateOrder);
-router.delete('/:id', OrderController.deleteOrder);
-router.patch('/:id/status', OrderController.updateOrderStatus);
-router.patch('/:id/payment-status', OrderController.updatePaymentStatus);
+// Basic CRUD Operations
+router.get('/', authenticateToken, OrderController.getAllOrders);
+router.get('/:id', authenticateToken, OrderController.getOrderById);
+router.put('/:id', authenticateToken, OrderController.updateOrder);
+router.delete('/:id', authenticateToken, OrderController.deleteOrder);
+
+// Status management
+router.patch('/:id/status', authenticateToken, OrderController.updateOrderStatus);
 
 // Order items management
-router.post('/:id/items', OrderController.addOrderItem);
-router.put('/:id/items/:itemId', OrderController.updateOrderItem);
-router.delete('/:id/items/:itemId', OrderController.removeOrderItem);
+router.post('/:id/items', authenticateToken, OrderController.addOrderItem);
+router.put('/:id/items/:itemId', authenticateToken, OrderController.updateOrderItem);
+router.delete('/:id/items/:itemId', authenticateToken, OrderController.removeOrderItem);
 
 // Shipping operations
-router.patch('/:id/shipping-address', OrderController.updateShippingAddress);
+router.patch('/:id/shipping-address', authenticateToken, OrderController.updateShippingAddress);
 
 module.exports = router;

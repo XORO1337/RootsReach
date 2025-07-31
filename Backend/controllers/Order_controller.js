@@ -1,17 +1,25 @@
 const OrderService = require('../services/Order_serv');
 
 class OrderController {
-  // Create order
+  // Create new order
   static async createOrder(req, res) {
     try {
-      const order = await OrderService.createOrder(req.body);
-      res.status(201).json({
+      const { items = [], shippingAddress, status = 'pending' } = req.body;
+      const orderData = {
+        buyer: req.user.id,
+        items,
+        shippingAddress,
+        status
+      };
+
+      const order = await OrderService.createOrder(orderData);
+      return res.status(201).json({
         success: true,
         message: 'Order created successfully',
         data: order
       });
     } catch (error) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: error.message
       });
@@ -133,19 +141,36 @@ class OrderController {
     }
   }
 
-  // Get orders by artisan
-  static async getOrdersByArtisan(req, res) {
+    // Get artisan orders
+  static async getArtisanOrders(req, res) {
     try {
-      const page = parseInt(req.query.page) || 1;
-      const limit = parseInt(req.query.limit) || 10;
-      const result = await OrderService.getOrdersByArtisan(req.params.artisanId, page, limit);
-      res.status(200).json({
+      const { page = 1, limit = 10 } = req.query;
+      const orders = await OrderService.getArtisanOrders(req.user.id, parseInt(page), parseInt(limit));
+      return res.status(200).json({
         success: true,
-        message: 'Orders retrieved successfully',
-        data: result
+        message: 'Artisan orders retrieved successfully',
+        data: orders
       });
     } catch (error) {
-      res.status(500).json({
+      return res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
+  }
+
+  // Get distributor orders
+  static async getDistributorOrders(req, res) {
+    try {
+      const { page = 1, limit = 10 } = req.query;
+      const orders = await OrderService.getDistributorOrders(req.user.id, parseInt(page), parseInt(limit));
+      return res.status(200).json({
+        success: true,
+        message: 'Distributor orders retrieved successfully',
+        data: orders
+      });
+    } catch (error) {
+      return res.status(500).json({
         success: false,
         message: error.message
       });

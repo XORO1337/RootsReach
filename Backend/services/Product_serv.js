@@ -1,4 +1,8 @@
 const Product = require('../models/Product');
+const mongoosePaginate = require('mongoose-paginate-v2');
+
+// Apply pagination plugin to the schema
+Product.schema.plugin(mongoosePaginate);
 
 class ProductService {
   // Create a new product
@@ -8,6 +12,24 @@ class ProductService {
       return await product.save();
     } catch (error) {
       throw new Error(`Error creating product: ${error.message}`);
+    }
+  }
+
+  // Get products with pagination, filters, and sorting (for distributor dashboard)
+  static async getProducts(page = 1, limit = 10, filters = {}, sort = { createdAt: -1 }) {
+    try {
+      const options = {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        sort,
+        populate: 'artisanId', // Fixed: use consistent field name
+        lean: true
+      };
+
+      const products = await Product.paginate(filters, options);
+      return products;
+    } catch (error) {
+      throw new Error(`Error getting products: ${error.message}`);
     }
   }
 
@@ -252,7 +274,7 @@ class ProductService {
   static async getProductCategories() {
     try {
       const categories = await Product.distinct('category');
-      return categories;
+      return categories.filter(cat => cat); // Filter out null/undefined values
     } catch (error) {
       throw new Error(`Error fetching product categories: ${error.message}`);
     }
@@ -287,7 +309,7 @@ class ProductService {
     }
   }
 
-  // Update product images
+  // Update product images (replace all images)
   static async updateProductImages(id, images) {
     try {
       const product = await Product.findByIdAndUpdate(
@@ -305,7 +327,7 @@ class ProductService {
     }
   }
 
-  // Add product images
+  // Add product images (append to existing images)
   static async addProductImages(id, images) {
     try {
       const product = await Product.findByIdAndUpdate(
@@ -324,7 +346,7 @@ class ProductService {
     }
   }
 
-  // Remove product image
+  // Remove product image by URL
   static async removeProductImage(id, imageUrl) {
     try {
       const product = await Product.findByIdAndUpdate(
@@ -346,12 +368,15 @@ class ProductService {
   // Get popular products (based on a simple popularity metric)
   static async getPopularProducts(limit = 10) {
     try {
-      // For now, we'll sort by creation date as a proxy for popularity
-      // In a real application, this would be based on sales, views, etc.
-      const products = await Product.find({ status: 'active' })
+      // In a real application, this would be based on sales, views, ratings, etc.
+      // For now, we'll sort by creation date and active status
+      const products = await Product.find({ 
+        status: 'active',
+        stock: { $gt: 0 }
+      })
         .populate('artisanId', 'name email phone')
-        .sort({ createdAt: -1 })
-        .limit(limit);
+        .sort({ createdAt: -1, stock: -1 }) // Recently added with good stock
+        .limit(parseInt(limit));
 
       return products;
     } catch (error) {
@@ -398,6 +423,11 @@ class ProductService {
   // Update product status
   static async updateProductStatus(id, status) {
     try {
+      const validStatuses = ['active', 'inactive', 'out_of_stock', 'discontinued'];
+      if (!validStatuses.includes(status)) {
+        throw new Error('Invalid status. Valid statuses are: ' + validStatuses.join(', '));
+      }
+
       const product = await Product.findByIdAndUpdate(
         id,
         { status },
@@ -443,6 +473,81 @@ class ProductService {
       };
     } catch (error) {
       throw new Error(`Error fetching products by price range: ${error.message}`);
+    }
+  }
+
+  // Bulk update products
+  static async bulkUpdateProducts(filter, updateData) {
+    try {
+      const result = await Product.updateMany(filter, updateData);
+      return {
+        message: `${result.modifiedCount} products updated successfully`,
+        modifiedCount: result.modifiedCount,
+        matchedCount: result.matchedCount
+      };
+    } catch (error) {
+      throw new Error(`Error bulk updating products: ${error.message}`);
+    }
+  }
+
+  // Get product statistics
+  static async getProductStatistics() {
+    try {
+      const stats = await Product.aggregate([
+        {
+          $group: {
+            _id: null,
+            totalProducts: { $sum: 1 },
+            activeProducts: {
+              $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] }
+            },
+            inactiveProducts: {
+              $sum: { $cond: [{ $eq: ['$status', 'inactive'] }, 1, 0] }
+            },
+            outOfStockProducts: {
+              $sum: { $cond: [{ $eq: ['$status', 'out_of_stock'] }, 1, 0] }
+            },
+            discontinuedProducts: {
+              $sum: { $cond: [{ $eq: ['$status', 'discontinued'] }, 1, 0] }
+            },
+            totalStock: { $sum: '$stock' },
+            averagePrice: { $avg: '$price' },
+            minPrice: { $min: '$price' },
+            maxPrice: { $max: '$price' }
+          }
+        }
+      ]);
+
+      return stats[0] || {
+        totalProducts: 0,
+        activeProducts: 0,
+        inactiveProducts: 0,
+        outOfStockProducts: 0,
+        discontinuedProducts: 0,
+        totalStock: 0,
+        averagePrice: 0,
+        minPrice: 0,
+        maxPrice: 0
+      };
+    } catch (error) {
+      throw new Error(`Error fetching product statistics: ${error.message}`);
+    }
+  }
+
+  // Get products with low stock alert
+  static async getLowStockAlert(threshold = 5) {
+    try {
+      const products = await Product.find({
+        stock: { $lte: threshold, $gt: 0 },
+        status: { $in: ['active', 'inactive'] }
+      })
+        .populate('artisanId', 'name email phone')
+        .sort({ stock: 1 })
+        .limit(50); // Limit to prevent overwhelming results
+
+      return products;
+    } catch (error) {
+      throw new Error(`Error fetching low stock alert: ${error.message}`);
     }
   }
 }
