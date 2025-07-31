@@ -20,6 +20,10 @@ import DistributorDashboard from './components/dashboard/distributor-dashboard/D
 import AdminDashboard from './components/dashboard/admin-dashboard/AdminDashboard.tsx';
 import HomeDashboard from './components/dashboard/homedashboard/index.jsx';
 import BuyerDashboard from './components/dashboard/buyerdashboard/index.jsx';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
+import Unauthorized from './components/Auth/Unauthorized';
+
+import { AuthProvider } from './components/Auth/AuthContext';
 
 import {
   rawMaterials,
@@ -68,7 +72,7 @@ function ArtisanDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-8">
-            <RawMaterials materials={rawMaterials} onOrderMore={handleOrderMore} />
+            <RawMaterials onOrderMore={handleOrderMore} />
             <OrdersTable orders={orders} onSearch={handleSearch} onFilter={handleFilter} />
           </div>
           {/* Right Column */}
@@ -97,28 +101,37 @@ function App() {
   };
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <AuthLayout>
-            {isSignUp ? (
-              <SignUp onToggleMode={handleToggleMode} />
-            ) : (
-              <Login onToggleMode={handleToggleMode} />
-            )}
-          </AuthLayout>
-        }
-      />
+    <AuthProvider>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <AuthLayout>
+              {isSignUp ? (
+                <SignUp onToggleMode={handleToggleMode} />
+              ) : (
+                <Login onToggleMode={handleToggleMode} />
+              )}
+            </AuthLayout>
+          }
+        />
 
-      <Route path="/artisan-dashboard" element={<ArtisanDashboard />} />
-      <Route path="/distributor-dashboard" element={<DistributorDashboard />} />
-      <Route path="/admin-dashboard" element={<AdminDashboard />} />
-      <Route path="/home-dashboard" element={<HomeDashboard />} />
-      <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
+        <Route path="/artisan-dashboard" element={<ArtisanDashboard />} />
+        <Route path="/distributor-dashboard" element={<DistributorDashboard />} />
+        <Route
+          path="/admin-dashboard"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/home-dashboard" element={<HomeDashboard />} />
+        <Route path="/buyer-dashboard" element={<BuyerDashboard />} />
+        <Route path="/unauthorized" element={<Unauthorized />} />
 
-
-    </Routes>
+      </Routes>
+    </AuthProvider>
   );
 }
 

@@ -197,11 +197,8 @@ const userSchema = new Schema({
   timestamps: true
 });
 
-// Index for faster queries
-userSchema.index({ email: 1 });
-userSchema.index({ phone: 1 });
+// Index for faster queries (only for fields that don't already have unique/sparse indexes)
 userSchema.index({ role: 1 });
-userSchema.index({ googleId: 1 });
 
 // Virtual for account locked
 userSchema.virtual('isLocked').get(function() {

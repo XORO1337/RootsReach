@@ -278,7 +278,7 @@ const detectMaliciousRequests = async (req, res, next) => {
     }
 
     // Check for attempts to access admin endpoints by non-admin users
-    if (req.originalUrl.includes('/admin/') && userRole !== 'admin') {
+    if (req.originalUrl.includes('/admin/') && userRole !== 'admin' && req.originalUrl !== '/api/auth/admin/login') {
       suspiciousPatterns.push('UNAUTHORIZED_ADMIN_ACCESS');
     }
 

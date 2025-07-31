@@ -9,6 +9,7 @@ import FeedbackReports from './components/feedback-reports/FeedbackReports';
 import Analytics from './components/analytics/Analytics';
 import Notifications from './components/notifications/Notifications';
 import DataExport from './components/data-export/DataExport';
+import AdminDashboardRawMaterials from './AdminDashboardRawMaterials';
 
 const AdminDashboardContent: React.FC = () => {
   const { t } = useLanguage();
@@ -22,6 +23,8 @@ const AdminDashboardContent: React.FC = () => {
         return <UserManagement />;
       case 'products':
         return <ProductModeration />;
+      case 'raw-materials':
+        return <AdminDashboardRawMaterials />;
       case 'orders':
         return <OrderMonitoring />;
       case 'reports':
@@ -45,6 +48,8 @@ const AdminDashboardContent: React.FC = () => {
         return t('page.userManagement');
       case 'products':
         return t('page.productModeration');
+      case 'raw-materials':
+        return 'Raw Materials Management';
       case 'orders':
         return t('page.orderMonitoring');
       case 'reports':
@@ -68,6 +73,8 @@ const AdminDashboardContent: React.FC = () => {
         return t('subtitle.manageUsers');
       case 'products':
         return t('subtitle.reviewProducts');
+      case 'raw-materials':
+        return 'Manage raw materials inventory and stock';
       case 'orders':
         return t('subtitle.monitorOrders');
       case 'reports':

@@ -13,18 +13,40 @@ const rawMaterialSchema = new Schema({
   },
   category: {
     type: String,
+    trim: true,
+    default: 'General'
+  },
+  quantity: {
+    type: String,
+    required: true
+  },
+  unit: {
+    type: String,
     required: true,
-    trim: true
+    default: 'kg'
   },
   pricePerUnit: {
     type: Number,
-    required: true,
-    min: 0
+    min: 0,
+    default: 0
   },
   stock: {
     type: Number,
-    required: true,
-    min: 0
+    min: 0,
+    default: 0
+  },
+  status: {
+    type: String,
+    enum: ['Available', 'Out of Stock', 'Pending'],
+    default: 'Available'
+  },
+  image: {
+    type: String, // URL or base64 string
+    trim: true
+  },
+  date: {
+    type: Date,
+    default: Date.now
   },
   supplierId: {
     type: Schema.Types.ObjectId,

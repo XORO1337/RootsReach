@@ -530,6 +530,69 @@ class AuthController {
       });
     }
   }
+
+  // =================================================================================================
+  // 🔑 ADMIN LOGIN
+  // =================================================================================================
+  static async adminLogin(req, res) {
+    try {
+      const { email, password } = req.body;
+
+      // Find user by email
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+
+      // Check if user is an admin
+      if (user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. Not an administrator.'
+        });
+      }
+
+      // Check password
+      const isPasswordValid = await user.comparePassword(password);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials'
+        });
+      }
+
+      // Generate tokens
+      const accessToken = generateAccessToken({ userId: user._id, role: user.role });
+      const refreshToken = generateRefreshToken({ userId: user._id });
+
+      // Store refresh token
+      user.refreshTokens.push({ token: refreshToken });
+      await user.save();
+
+      res.json({
+        success: true,
+        message: 'Admin login successful',
+        token: accessToken,
+        refreshToken: refreshToken,
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
+
+    } catch (error) {
+      console.error('Admin login error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Server error during admin login'
+      });
+    }
+  }
 }
 
 module.exports = AuthController;

@@ -19,12 +19,32 @@ const {
   validatePhoneOnly
 } = require('../middleware/validation');
 
-// ========== AUTHENTICATION ROUTES ==========
+// =================================================================================================
+// 🔑 ADMIN AUTHENTICATION ROUTES
+// =================================================================================================
 
-// Register with phone number
+// @route   POST /api/auth/admin/login
+// @desc    Authenticate admin and get token
+// @access  Public
+router.post('/admin/login',
+  generalLimit,
+  validateUserLogin,
+  AuthController.adminLogin
+);
+
+
+// =================================================================================================
+// 👤 USER AUTHENTICATION ROUTES
+// =================================================================================================
+
+// @route   POST /api/auth/register
+// @desc    Register with phone number
+// @access  Public
 router.post('/register', authLimit, validateUserRegistration, AuthController.registerWithPhone);
 
-// Login with phone/email and password
+// @route   POST /api/auth/login
+// @desc    Login with phone/email and password
+// @access  Public
 router.post('/login', authLimit, validateUserLogin, AuthController.login);
 
 // Google OAuth routes

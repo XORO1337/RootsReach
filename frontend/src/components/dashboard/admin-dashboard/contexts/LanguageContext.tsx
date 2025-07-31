@@ -28,7 +28,7 @@ const translations = {
     'header.socialImpactPlatform': 'Social Impact Platform',
     'header.search': 'Search...',
     'header.adminUser': 'Admin User',
-    'header.adminEmail': 'admin@platform.com',
+    'header.adminEmail': 'recreations014@gmail.com',
     
     // Page Titles
     'page.dashboardOverview': 'Dashboard Overview',
@@ -210,7 +210,7 @@ const translations = {
     'header.socialImpactPlatform': 'सामाजिक प्रभाव प्लेटफॉर्म',
     'header.search': 'खोजें...',
     'header.adminUser': 'एडमिन उपयोगकर्ता',
-    'header.adminEmail': 'admin@platform.com',
+    'header.adminEmail': 'recreations014@gmail.com',
     
     // Page Titles
     'page.dashboardOverview': 'डैशबोर्ड अवलोकन',
