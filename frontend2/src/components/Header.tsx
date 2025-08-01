@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ShoppingCart, Menu, X, Heart, User } from 'lucide-react';
+import { Search, ShoppingCart, Menu, X, Heart, User, LogOut } from 'lucide-react';
 import { FilterState } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
   cartItemsCount: number;
@@ -13,6 +14,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, onFiltersChange }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const { user, logout } = useAuth();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFiltersChange({ ...filters, search: e.target.value });
@@ -101,34 +103,68 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                   className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200"
                 >
                   <User className="h-5 w-5" />
-                  <span className="text-sm font-medium">Account</span>
+                  <span className="text-sm font-medium">
+                    {user ? user.name : 'Account'}
+                  </span>
                 </button>
                 
                 {/* User Dropdown Menu */}
                 {showUserMenu && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                    <Link
-                      to="/login"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      Sign In
-                    </Link>
-                    <Link
-                      to="/signup"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      Create Account
-                    </Link>
-                    <hr className="my-2 border-gray-200" />
-                    <Link
-                      to="/artisan"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
-                      onClick={() => setShowUserMenu(false)}
-                    >
-                      Artisan Dashboard
-                    </Link>
+                    {user ? (
+                      <>
+                        <div className="px-4 py-2">
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          <div className="text-xs text-gray-500">{user.email}</div>
+                        </div>
+                        <hr className="my-2 border-gray-200" />
+                        {user.role === 'artisan' && (
+                          <Link
+                            to="/artisan/dashboard"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            Artisan Dashboard
+                          </Link>
+                        )}
+                        {user.role === 'customer' && (
+                          <Link
+                            to="/orders"
+                            className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                            onClick={() => setShowUserMenu(false)}
+                          >
+                            My Orders
+                          </Link>
+                        )}
+                        <button
+                          onClick={() => {
+                            logout();
+                            setShowUserMenu(false);
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center"
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Sign Out
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Link
+                          to="/login"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Sign In
+                        </Link>
+                        <Link
+                          to="/signup"
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                          onClick={() => setShowUserMenu(false)}
+                        >
+                          Create Account
+                        </Link>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

@@ -1,31 +1,102 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Eye, EyeOff } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, User, Palette, Package } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { buildApiUrl, buildGoogleOAuthUrl, API_CONFIG } from '../../config/api';
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
+    role: 'customer' as 'customer' | 'artisan' | 'distributor'
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+    if (error) setError('');
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt:', formData);
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.AUTH.LOGIN), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Origin': 'https://cautious-zebra-x5549r5475j6f979-5174.app.github.dev'
+        },
+        credentials: 'include', // Include cookies for JWT
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('🔍 Login Debug - Backend response:', data);
+        console.log('🔍 Login Debug - User role from backend:', data.data.user.role);
+        
+        // Use the auth context to manage user state
+        const userData = {
+          id: data.data.user.id,
+          name: data.data.user.name,
+          email: data.data.user.email,
+          role: data.data.user.role,
+          isEmailVerified: data.data.user.isEmailVerified,
+          isPhoneVerified: data.data.user.isPhoneVerified,
+          isIdentityVerified: data.data.user.isIdentityVerified
+        };
+        
+        console.log('🔍 Login Debug - UserData object created:', userData);
+        console.log('🔍 Login Debug - About to redirect based on role:', userData.role);
+        
+        login(userData, data.data.accessToken);
+        
+        // Redirect rules:
+        // - Customer (or any unknown/default): go to marketplace root '/'
+        // - Artisan: '/artisan'
+        // - Distributor: '/distributor'
+        const role = data.data.user.role;
+        if (role === 'artisan') {
+          console.log('🔍 Login Debug - Redirecting to /artisan');
+          navigate('/artisan');
+        } else if (role === 'distributor') {
+          console.log('🔍 Login Debug - Redirecting to /distributor');
+          navigate('/distributor');
+        } else {
+          console.log('🔍 Login Debug - Redirecting to / (customer or default)');
+          navigate('/');
+        }
+      } else {
+        setError(data.message || 'Login failed. Please check your credentials.');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      setError('An error occurred during login. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleAuth = () => {
-    // Handle Google authentication
-    console.log('Google auth clicked');
+    // Store selected role in sessionStorage and redirect to Google OAuth
+    sessionStorage.setItem('selectedRole', formData.role);
+    window.location.href = buildGoogleOAuthUrl(formData.role);
   };
 
   return (
@@ -61,6 +132,13 @@ const Login: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h1>
           <p className="text-gray-600">Sign in to your account to continue</p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -107,12 +185,81 @@ const Login: React.FC = () => {
             </div>
           </div>
 
+          {/* Role Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-3">
+              For Google Sign-In, I want to join as:
+            </label>
+            <p className="text-xs text-gray-500 mb-3">
+              Note: This selection only applies to Google OAuth. For email login, your existing account role will be used.
+            </p>
+            <div className="grid grid-cols-1 gap-3">
+              {/* Customer Role */}
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, role: 'customer' }))}
+                className={`p-4 border-2 rounded-lg text-left transition-all ${
+                  formData.role === 'customer'
+                    ? 'border-orange-500 bg-orange-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <User className={`h-5 w-5 ${formData.role === 'customer' ? 'text-orange-500' : 'text-gray-400'}`} />
+                  <div>
+                    <div className="font-medium text-gray-900">Customer</div>
+                    <div className="text-sm text-gray-500">Browse and purchase handmade crafts</div>
+                  </div>
+                </div>
+              </button>
+
+              {/* Artisan Role */}
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, role: 'artisan' }))}
+                className={`p-4 border-2 rounded-lg text-left transition-all ${
+                  formData.role === 'artisan'
+                    ? 'border-orange-500 bg-orange-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Palette className={`h-5 w-5 ${formData.role === 'artisan' ? 'text-orange-500' : 'text-gray-400'}`} />
+                  <div>
+                    <div className="font-medium text-gray-900">Artisan</div>
+                    <div className="text-sm text-gray-500">Sell your handmade crafts and manage orders</div>
+                  </div>
+                </div>
+              </button>
+
+              {/* Distributor Role */}
+              <button
+                type="button"
+                onClick={() => setFormData(prev => ({ ...prev, role: 'distributor' }))}
+                className={`p-4 border-2 rounded-lg text-left transition-all ${
+                  formData.role === 'distributor'
+                    ? 'border-orange-500 bg-orange-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-3">
+                  <Package className={`h-5 w-5 ${formData.role === 'distributor' ? 'text-orange-500' : 'text-gray-400'}`} />
+                  <div>
+                    <div className="font-medium text-gray-900">Distributor</div>
+                    <div className="text-sm text-gray-500">Manage inventory and distribute products</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
           {/* Sign In Button */}
           <button
             type="submit"
-            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-4 rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl"
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-4 rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In
+            {isLoading ? 'Signing In...' : 'Sign In'}
           </button>
 
           {/* Divider */}

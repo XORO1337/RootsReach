@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { ArrowRight, Users, MapPin, Award } from 'lucide-react';
 
 const Hero: React.FC = () => {
@@ -25,10 +26,13 @@ const Hero: React.FC = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <button className="bg-orange-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-orange-700 transition-colors flex items-center justify-center">
+              <Link 
+                to="/signup"
+                className="bg-orange-600 text-white px-8 py-4 rounded-lg font-semibold hover:bg-orange-700 transition-colors flex items-center justify-center"
+              >
                 Start Shopping
                 <ArrowRight className="ml-2 h-5 w-5" />
-              </button>
+              </Link>
               <button className="border-2 border-orange-600 text-orange-600 px-8 py-4 rounded-lg font-semibold hover:bg-orange-50 transition-colors">
                 Meet Our Artisans
               </button>

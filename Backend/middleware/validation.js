@@ -22,20 +22,30 @@ const validateUserRegistration = [
     .matches(/^[a-zA-Z\s]+$/)
     .withMessage('Name can only contain letters and spaces'),
     
-  body('phone')
-    .matches(/^[+]?[1-9]\d{1,14}$/)
-    .withMessage('Please provide a valid phone number (format: +918851929990 or 918851929990)')
-    .trim(),
-    
-  body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters long')
-    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
-    .withMessage('Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address'),
     
   body('role')
     .isIn(['customer', 'artisan', 'distributor'])
     .withMessage('Role must be customer, artisan, or distributor'),
+    
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters long'),
+    
+  body('role')
+    .isIn(['customer', 'artisan', 'distributor'])
+    .withMessage('Role must be customer, artisan, or distributor'),
+    
+  // Custom validation to ensure either phone or email is provided
+  body().custom((value, { req }) => {
+    if (!req.body.phone && !req.body.email) {
+      throw new Error('Either phone number or email is required');
+    }
+    return true;
+  }),
     
   handleValidationErrors
 ];

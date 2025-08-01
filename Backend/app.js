@@ -17,6 +17,7 @@ const materialRoutes = require('./routes/Material_route');
 const inventoryRoutes = require('./routes/Inventory_route');
 const backupRoutes = require('./routes/Backup_route');
 const devLogsRoutes = require('./routes/DevLogs_route');
+const adminRoutes = require('./routes/Admin_route');
 
 // Import middleware
 const { generalLimit } = require('./middleware/rateLimiting');
@@ -36,22 +37,35 @@ const app = express();
 const requestLogger = new RequestLogger();
 app.locals.requestLogger = requestLogger;
 
-// Security middleware
+// Security middleware with relaxed CSP for development
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-    },
-  },
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+  crossOriginOpenerPolicy: false,
+  crossOriginResourcePolicy: false,
+}));
+
+// CORS configuration
+app.use(cors({
+  origin: 'https://cautious-zebra-x5549r5475j6f979-5174.app.github.dev',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin', 'X-Requested-With']
 }));
 
 // Trust proxy for accurate IP detection (more specific for security)
 app.set('trust proxy', process.env.NODE_ENV === 'production' ? 1 : false);
 
-// Request logging middleware (FIRST - before any other middleware)
+// Simple CORS configuration
+const corsOptions = {
+  origin: 'https://cautious-zebra-x5549r5475j6f979-5174.app.github.dev',
+  credentials: true
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+
+// Request logging middleware
 app.use(requestLogger.middleware());
 
 // Global security scanning (applied to all routes)
@@ -59,56 +73,6 @@ app.use(detectMaliciousRequests);
 
 // Rate limiting
 app.use(generalLimit);
-
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5173',
-      'https://cautious-zebra-x5549r5475j6f979-5173.app.github.dev',
-      'https://cautious-zebra-x5549r5475j6f979-5000.app.github.dev',
-      process.env.CLIENT_URL
-    ].filter(Boolean);
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Check for GitHub Codespaces patterns (more flexible matching)
-    if (origin && (origin.includes('github.dev') || origin.includes('gitpod.io') || origin.includes('localhost'))) {
-      return callback(null, true);
-    }
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.warn(`🚫 CORS: Origin ${origin} not allowed. Allowed origins:`, allowedOrigins);
-      // In development, allow anyway but log the warning
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔧 Development mode: Allowing CORS for:', origin);
-        return callback(null, true);
-      }
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: [
-    'Origin', 
-    'X-Requested-With', 
-    'Content-Type', 
-    'Accept', 
-    'Authorization', 
-    'Cache-Control',
-    'X-Dev-Key'
-  ],
-  exposedHeaders: ['X-Audit-Trail'],
-  optionsSuccessStatus: 200,
-  preflightContinue: false
-};
-
-app.use(cors(corsOptions));
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
@@ -125,7 +89,7 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 10 * 60 * 1000 // 10 minutes
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
 
@@ -173,6 +137,9 @@ app.use('/api/backups', backupRoutes);
 
 console.log('Defining dev logs routes...');
 app.use('/api/dev', devLogsRoutes);
+
+console.log('Defining admin routes...');
+app.use('/api/admin', adminRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

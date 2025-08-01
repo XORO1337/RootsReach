@@ -25,9 +25,15 @@ const generateRefreshToken = (payload) => {
 
 // Verify JWT token middleware
 const authenticateToken = async (req, res, next) => {
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   try {
+    // Try to get token from Authorization header or cookie
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && authHeader.split(' ')[1] || req.cookies.accessToken; // Check both Bearer token and cookie
     
     if (!token) {
       return res.status(401).json({

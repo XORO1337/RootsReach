@@ -21,8 +21,8 @@ const {
 
 // ========== AUTHENTICATION ROUTES ==========
 
-// Register with phone number
-router.post('/register', authLimit, validateUserRegistration, AuthController.registerWithPhone);
+// Register with email or phone
+router.post('/register', authLimit, validateUserRegistration, AuthController.registerWithEmail);
 
 // Login with phone/email and password
 router.post('/login', authLimit, validateUserLogin, AuthController.login);

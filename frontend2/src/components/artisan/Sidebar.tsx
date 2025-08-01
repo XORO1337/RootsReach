@@ -6,16 +6,17 @@ import {
   ShoppingCart, 
   Truck, 
   BarChart3, 
-  Settings,
-  User
+  Settings
 } from 'lucide-react';
 import { NavigationPage } from '../../types/dashboard';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
   currentPage: NavigationPage;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ currentPage }) => {
+  const { user } = useAuth();
   const navigationItems = [
     { id: 'dashboard' as NavigationPage, label: 'Dashboard', icon: Home, path: '/artisan' },
     { id: 'items' as NavigationPage, label: 'My Items', icon: Package, path: '/artisan/items' },
@@ -85,11 +86,22 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage }) => {
       {/* User Profile */}
       <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-gray-600" />
-          </div>
+          {user?.photoURL ? (
+            <img
+              src={user.photoURL}
+              alt={user.name}
+              className="w-8 h-8 rounded-full object-cover"
+            />
+          ) : (
+            <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+              <span className="text-orange-600 font-medium">
+                {user?.name?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+          )}
           <div>
-            <p className="text-sm font-medium text-gray-900">John Doe</p>
+            <p className="text-sm font-medium text-gray-900">{user?.name || 'Guest'}</p>
+            <p className="text-xs text-gray-500">Artisan</p>
           </div>
         </div>
       </div>
