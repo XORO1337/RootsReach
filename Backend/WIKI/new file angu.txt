@@ -1,7 +1,0 @@
-PS E:\MERN summer training\Project Rootsreach\backend> node app.js
-E:\MERN summer training\Project Rootsreach\backend\node_modules\passport-oauth2\lib\strategy.js:87
-  if (!options.clientID) { throw new TypeError('OAuth2Strategy requires a clientID option'); }
-                           ^
-
-TypeError: OAuth2Strategy requires a clientID option
-    at Strategy.OAuth2Strategy (E:\MERN summer training\Project Rootsreach\backend\node_modules\passport-oauth2\lib\strategy.js:87:34)

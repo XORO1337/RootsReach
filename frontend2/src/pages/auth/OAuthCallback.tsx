@@ -59,23 +59,45 @@ const OAuthCallback: React.FC = () => {
           isIdentityVerified: userData.isIdentityVerified || false
         };
         
+        console.log('🔍 OAuth Debug - Calling login with userInfo:', userInfo);
+        console.log('🔍 OAuth Debug - Token being stored:', token ? 'Present' : 'Missing');
+        
         // Store user data and token
         login(userInfo, token);
+        
+        // Wait for the auth state to stabilize
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Verify the session was stored correctly
+        const storedToken = localStorage.getItem('accessToken');
+        const storedRole = localStorage.getItem('userRole');
+        console.log('🔍 OAuth Debug - Verification - Stored token:', storedToken ? 'Present' : 'Missing');
+        console.log('🔍 OAuth Debug - Verification - Stored role:', storedRole);
+        
+        if (!storedToken || !storedRole) {
+          throw new Error('Failed to store authentication data');
+        }
         
         setStatus('success');
         setMessage(`Welcome ${userData.name}! Redirecting to your dashboard...`);
         
         // Redirect based on role after a brief delay
         setTimeout(() => {
-          if (userData.role === 'artisan') {
-            navigate('/artisan');
-          } else if (userData.role === 'distributor') {
-            navigate('/distributor');
-          } else {
-            // Customer or default role goes to marketplace
-            navigate('/');
+          console.log('🔍 OAuth Debug - Redirecting based on role:', userData.role);
+          switch (userData.role) {
+            case 'artisan':
+              console.log('🔍 OAuth Debug - Redirecting to /artisan');
+              navigate('/artisan', { replace: true });
+              break;
+            case 'distributor':
+              console.log('🔍 OAuth Debug - Redirecting to /distributor');
+              navigate('/distributor', { replace: true });
+              break;
+            default:
+              console.log('🔍 OAuth Debug - Redirecting to / (customer or default)');
+              navigate('/', { replace: true });
           }
-        }, 2000);
+        }, 1000);
 
       } catch (error) {
         console.error('Error processing OAuth callback:', error);

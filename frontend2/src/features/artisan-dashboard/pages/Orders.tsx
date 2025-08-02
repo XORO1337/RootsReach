@@ -1,37 +1,67 @@
 import React, { useState } from 'react';
 import { Search, Eye, DollarSign, ShoppingBag, CheckCircle } from 'lucide-react';
-import { Order } from '../types/dashboard';
+import { useArtisanOrders } from '../../../hooks/useArtisanOrders';
 
-interface OrdersProps {
-  orders: Order[];
-}
-
-const Orders: React.FC<OrdersProps> = ({ orders }) => {
+const Orders: React.FC = () => {
+  const { orders, isLoading, error, updateOrderStatus, setError } = useArtisanOrders();
   const [searchTerm, setSearchTerm] = useState('');
-  const [customerFilter, setCustomerFilter] = useState('All Customers');
   const [statusFilter, setStatusFilter] = useState('All Status');
 
+  if (isLoading) {
+    return (
+      <div className="p-6 flex justify-center items-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-red-500">{error}</p>
+        <button
+          onClick={() => {
+            setError(null);
+            window.location.reload();
+          }}
+          className="mt-4 bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCustomer = customerFilter === 'All Customers' || order.customer.type === customerFilter;
+    const matchesSearch = order.customerId?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order._id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All Status' || order.status === statusFilter;
-    return matchesSearch && matchesCustomer && matchesStatus;
+    return matchesSearch && matchesStatus;
   });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Pending': return 'bg-yellow-100 text-yellow-800';
-      case 'Confirmed': return 'bg-blue-100 text-blue-800';
-      case 'Delivered': return 'bg-green-100 text-green-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'processing': return 'bg-blue-100 text-blue-800';
+      case 'shipped': return 'bg-purple-100 text-purple-800';
+      case 'delivered': return 'bg-green-100 text-green-800';
+      case 'cancelled': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    try {
+      await updateOrderStatus(orderId, newStatus);
+    } catch (error) {
+      console.error('Failed to update order status:', error);
+    }
+  };
+
   const totalOrders = orders.length;
-  const pendingOrders = orders.filter(order => order.status === 'Pending').length;
-  const confirmedOrders = orders.filter(order => order.status === 'Confirmed').length;
-  const totalValue = orders.reduce((sum, order) => sum + order.total, 0);
+  const pendingOrders = orders.filter(order => order.status === 'pending').length;
+  const processingOrders = orders.filter(order => order.status === 'processing').length;
+  const totalValue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
 
   return (
     <div className="p-6">
@@ -61,14 +91,15 @@ const Orders: React.FC<OrdersProps> = ({ orders }) => {
           </div>
         </div>
         
+                
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center">
             <div className="p-3 bg-blue-50 rounded-lg">
               <CheckCircle className="w-6 h-6 text-blue-600" />
             </div>
             <div className="ml-4">
-              <div className="text-2xl font-bold text-gray-900">{confirmedOrders}</div>
-              <div className="text-sm text-gray-600">Confirmed</div>
+              <div className="text-2xl font-bold text-gray-900">{processingOrders}</div>
+              <div className="text-sm text-gray-600">Processing</div>
             </div>
           </div>
         </div>
@@ -89,7 +120,9 @@ const Orders: React.FC<OrdersProps> = ({ orders }) => {
       {/* Order Management */}
       <div className="bg-white rounded-lg border border-gray-200">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Management</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Order Management</h2>
+          </div>
 
           {/* Filters */}
           <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-4">
@@ -105,23 +138,16 @@ const Orders: React.FC<OrdersProps> = ({ orders }) => {
             </div>
             <div className="flex space-x-3">
               <select
-                value={customerFilter}
-                onChange={(e) => setCustomerFilter(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option>All Customers</option>
-                <option>Normal Buyer</option>
-                <option>Distributor</option>
-              </select>
-              <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option>All Status</option>
-                <option>Pending</option>
-                <option>Confirmed</option>
-                <option>Delivered</option>
+                <option>pending</option>
+                <option>processing</option>
+                <option>shipped</option>
+                <option>delivered</option>
+                <option>cancelled</option>
               </select>
             </div>
           </div>
@@ -134,59 +160,54 @@ const Orders: React.FC<OrdersProps> = ({ orders }) => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Delivery</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredOrders.map((order) => (
-                <tr key={order.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{order.id}</td>
+                <tr key={order._id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">#{order._id.slice(-8)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{order.customer.name}</div>
-                      <div className="text-sm text-gray-500">{order.customer.email}</div>
+                      <div className="text-sm font-medium text-gray-900">{order.customerId?.name || 'Unknown'}</div>
+                      <div className="text-sm text-gray-500">{order.customerId?.email || 'No email'}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      order.customer.type === 'Distributor' 
-                        ? 'bg-orange-100 text-orange-800' 
-                        : 'bg-blue-100 text-blue-800'
-                    }`}>
-                      {order.customer.type}
-                    </span>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {order.items.length} item{order.items.length !== 1 ? 's' : ''}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.items}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.total.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${order.totalAmount.toFixed(2)}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(order.status)}`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
                       {order.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className={`w-2 h-2 rounded-full mr-2 ${
-                        order.delivery === 'Preparing' ? 'bg-orange-500' :
-                        order.delivery === 'Shipped' ? 'bg-blue-500' : 'bg-green-500'
-                      }`}></div>
-                      <span className="text-sm text-gray-900">{order.delivery}</span>
-                    </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {new Date(order.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.date}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-3">
-                      <button className="text-gray-400 hover:text-gray-600">
+                      <button className="text-indigo-600 hover:text-indigo-900">
                         <Eye className="w-4 h-4" />
                       </button>
-                      {order.status === 'Pending' && (
-                        <button className="bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600">
-                          Confirm
+                      {order.status === 'pending' && (
+                        <button 
+                          onClick={() => handleStatusChange(order._id, 'processing')}
+                          className="text-green-600 hover:text-green-900"
+                        >
+                          Accept
+                        </button>
+                      )}
+                      {order.status === 'processing' && (
+                        <button 
+                          onClick={() => handleStatusChange(order._id, 'shipped')}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          Ship
                         </button>
                       )}
                     </div>

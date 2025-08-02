@@ -65,13 +65,10 @@ const AnalyticsPage: React.FC = () => {
     </div>
   );
 
-  // Defensive: fallback to empty array if undefined
-  const salesByMonth = Array.isArray(analytics?.salesByMonth) ? analytics.salesByMonth : [];
-  const orderStatus = Array.isArray(analytics?.orderStatus) ? analytics.orderStatus : [];
-  const topProducts = Array.isArray(analytics?.topProducts) ? analytics.topProducts : [];
-  const totalRevenue = salesByMonth.reduce((sum, month) => sum + (month.sales || 0), 0);
-  const totalProducts = topProducts.length;
-  const totalOrders = orderStatus.reduce((sum, status) => sum + (status.count || 0), 0);
+  // Calculate total revenue from sales data
+  const totalRevenue = analytics.salesByMonth.reduce((sum, month) => sum + month.sales, 0);
+  const totalProducts = analytics.topProducts.length;
+  const totalOrders = analytics.orderStatus.reduce((sum, status) => sum + status.count, 0);
 
   return (
     <div className="p-6">
@@ -111,9 +108,10 @@ const AnalyticsPage: React.FC = () => {
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Sales Trend</h3>
           <div className="space-y-4">
-            {(Array.isArray(analytics.salesByMonth) ? analytics.salesByMonth : []).map((item, index, arr) => {
-              const maxSales = arr.length > 0 ? Math.max(...arr.map(s => s.sales || 0)) : 0;
+            {analytics.salesByMonth.map((item, index) => {
+              const maxSales = Math.max(...analytics.salesByMonth.map(s => s.sales));
               const percentage = maxSales > 0 ? (item.sales / maxSales) * 100 : 0;
+              
               return (
                 <div key={index} className="flex items-center justify-between">
                   <span className="text-sm text-gray-600 w-16">{item.month}</span>
@@ -138,10 +136,10 @@ const AnalyticsPage: React.FC = () => {
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Top Products</h3>
           <div className="space-y-4">
-            {(Array.isArray(analytics.topProducts) && analytics.topProducts.length === 0) ? (
+            {analytics.topProducts.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No product data available</p>
             ) : (
-              (Array.isArray(analytics.topProducts) ? analytics.topProducts : []).map((product, index) => (
+              analytics.topProducts.map((product, index) => (
                 <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
                     <span className="w-6 h-6 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3">
@@ -163,10 +161,10 @@ const AnalyticsPage: React.FC = () => {
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Order Status</h3>
           <div className="space-y-4">
-            {(Array.isArray(analytics.orderStatus) && analytics.orderStatus.length === 0) ? (
+            {analytics.orderStatus.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No order data available</p>
             ) : (
-              (Array.isArray(analytics.orderStatus) ? analytics.orderStatus : []).map((status, index) => {
+              analytics.orderStatus.map((status, index) => {
                 const getStatusColor = (statusName: string) => {
                   switch (statusName.toLowerCase()) {
                     case 'delivered': return 'bg-green-500';
@@ -217,7 +215,7 @@ const AnalyticsPage: React.FC = () => {
                 <span className="font-medium text-blue-800">Best Seller</span>
               </div>
               <p className="text-sm text-blue-700 mt-1">
-                {(Array.isArray(analytics.topProducts) && analytics.topProducts.length > 0) 
+                {analytics.topProducts.length > 0 
                   ? `${analytics.topProducts[0].name} is your top performer`
                   : 'Add products to see insights'
                 }

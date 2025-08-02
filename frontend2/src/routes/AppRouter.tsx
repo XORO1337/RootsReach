@@ -10,8 +10,10 @@ import DistributorDashboard from '../features/distributor-dashboard';
 import AdminLayout from '../components/AdminLayout';
 import AdminProtectedRoute from '../components/AdminProtectedRoute';
 import ProtectedRoute from '../components/ProtectedRoute';
+import AuthDebugPanel from '../components/AuthDebugPanel';
 import { AdminAuthProvider } from '../contexts';
 import { AuthProvider } from '../contexts/AuthContext';
+import DebugOAuth from '../pages/DebugOAuth';
 
 const AppRouter: React.FC = () => {
   return (
@@ -19,6 +21,9 @@ const AppRouter: React.FC = () => {
       <AdminAuthProvider>
         <Router>
           <Routes>
+            {/* Debug Route */}
+            <Route path="/debug" element={<DebugOAuth />} />
+            
             {/* Authentication Routes */}
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
@@ -49,7 +54,7 @@ const AppRouter: React.FC = () => {
             
             {/* Artisan Dashboard Routes */}
             <Route path="/artisan/*" element={
-              <ProtectedRoute allowedRoles={['artisan']}>
+              <ProtectedRoute allowedRoles={['artisan']} redirectTo="/login">
                 <ArtisanDashboard />
               </ProtectedRoute>
             } />
@@ -85,6 +90,7 @@ const AppRouter: React.FC = () => {
               },
             }}
           />
+          <AuthDebugPanel />
         </Router>
       </AdminAuthProvider>
     </AuthProvider>

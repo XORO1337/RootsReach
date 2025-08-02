@@ -60,7 +60,7 @@ const ArtisanDashboard: React.FC = () => {
         <Header title={getPageTitle(currentPage)} subtitle={getPageSubtitle(currentPage)} />
         <main className="overflow-y-auto h-full">
           <Routes>
-            <Route index element={<DashboardOverview stats={dashboardStats} />} />
+            <Route index element={<DashboardOverview />} />
             <Route path="dashboard" element={<Navigate to="/artisan" replace />} />
             <Route path="items" element={<MyItems items={inventoryItems} />} />
             <Route path="orders" element={<Orders orders={orders} />} />

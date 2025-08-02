@@ -40,38 +40,91 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    checkAuthStatus();
+    // Set up axios base URL and interceptors first
+    axios.defaults.baseURL = window.location.origin;
+    axios.defaults.withCredentials = true;
+    
+    // Clear any existing interceptors to prevent duplicates
+    axios.interceptors.request.clear();
+    axios.interceptors.response.clear();
+    
+    // Request interceptor to always include token
+    const requestInterceptor = axios.interceptors.request.use(
+      (config) => {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Response interceptor to handle token expiration
+    const responseInterceptor = axios.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        if (error.response?.status === 401 && isInitialized) {
+          console.log('🔍 AuthContext Debug - Token expired, logging out');
+          await logout();
+        }
+        return Promise.reject(error);
+      }
+    );
+
+    // Initialize auth status
+    const initializeAuth = async () => {
+      await checkAuthStatus();
+      setIsInitialized(true);
+    };
+    
+    initializeAuth();
+
+    // Cleanup interceptors on unmount
+    return () => {
+      axios.interceptors.request.eject(requestInterceptor);
+      axios.interceptors.response.eject(responseInterceptor);
+    };
   }, []);
 
   const checkAuthStatus = async () => {
     try {
+      console.log('🔍 AuthContext Debug - Checking auth status');
       const token = localStorage.getItem('accessToken');
+      
       if (!token) {
+        console.log('🔍 AuthContext Debug - No token found');
         setIsLoading(false);
         return;
       }
 
-      // Set token in axios defaults
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      // Validate token with backend and get fresh user data
+      console.log('🔍 AuthContext Debug - Token found, validating with backend');
+      
       try {
-        const response = await axios.get('https://cautious-zebra-x5549r5475j6f979-5000.app.github.dev/api/auth/profile');
+        // Set up token in axios headers before making request
+        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         
-        if (response.data.success) {
+        const response = await axios.get('/api/auth/profile');
+        console.log('🔍 AuthContext Debug - Profile response:', response.data);
+        
+        if (response.data.success && response.data.data) {
+          const backendUserData = response.data.data;
           const userData: User = {
-            id: response.data.data.id,
-            name: response.data.data.name,
-            email: response.data.data.email,
-            role: response.data.data.role,
-            phone: response.data.data.phone,
-            photoURL: response.data.data.photoURL,
-            isEmailVerified: response.data.data.isEmailVerified,
-            isPhoneVerified: response.data.data.isPhoneVerified,
-            isIdentityVerified: response.data.data.isIdentityVerified
+            id: backendUserData.id,
+            name: backendUserData.name,
+            email: backendUserData.email,
+            role: backendUserData.role,
+            phone: backendUserData.phone,
+            photoURL: backendUserData.photoURL,
+            isEmailVerified: backendUserData.isEmailVerified || false,
+            isPhoneVerified: backendUserData.isPhoneVerified || false,
+            isIdentityVerified: backendUserData.isIdentityVerified || false
           };
+          
+          console.log('🔍 AuthContext Debug - Setting user with role:', userData.role);
           setUser(userData);
           
           // Update localStorage with fresh data
@@ -83,37 +136,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             localStorage.setItem('userPhoto', userData.photoURL);
           }
         } else {
-          throw new Error('Invalid token');
+          console.log('🔍 AuthContext Debug - Invalid response from backend');
+          throw new Error('Invalid token response');
         }
       } catch (tokenError) {
-        console.warn('Token validation failed, falling back to localStorage data:', tokenError);
+        console.warn('🔍 AuthContext Debug - Token validation failed:', tokenError.message);
         
-        // Fallback to localStorage data if backend validation fails
-        const userRole = localStorage.getItem('userRole') as User['role'];
-        const userName = localStorage.getItem('userName');
-        const userEmail = localStorage.getItem('userEmail');
-        const userId = localStorage.getItem('userId');
-        const userPhoto = localStorage.getItem('userPhoto');
+        // If it's a network error and we have localStorage data, try to use it temporarily
+        if (tokenError.code === 'NETWORK_ERROR' || tokenError.code === 'ERR_NETWORK') {
+          const userRole = localStorage.getItem('userRole') as User['role'];
+          const userName = localStorage.getItem('userName');
+          const userEmail = localStorage.getItem('userEmail');
+          const userId = localStorage.getItem('userId');
+          const userPhoto = localStorage.getItem('userPhoto');
 
-        if (userRole && userName && userEmail && userId) {
-          const userData: User = {
-            id: userId,
-            name: userName,
-            email: userEmail,
-            role: userRole,
-            photoURL: userPhoto || undefined,
-            isEmailVerified: true,
-            isPhoneVerified: false,
-            isIdentityVerified: false
-          };
-          setUser(userData);
+          if (userRole && userName && userEmail && userId) {
+            console.log('🔍 AuthContext Debug - Using localStorage data due to network error, role:', userRole);
+            const userData: User = {
+              id: userId,
+              name: userName,
+              email: userEmail,
+              role: userRole,
+              photoURL: userPhoto || undefined,
+              isEmailVerified: true,
+              isPhoneVerified: false,
+              isIdentityVerified: false
+            };
+            setUser(userData);
+          } else {
+            console.log('🔍 AuthContext Debug - No valid localStorage data, logging out');
+            await logout();
+          }
         } else {
-          // Clear invalid data
+          console.log('🔍 AuthContext Debug - Token invalid, logging out');
           await logout();
         }
       }
     } catch (error) {
-      console.error('Error checking auth status:', error);
+      console.error('🔍 AuthContext Debug - Error checking auth status:', error);
       await logout();
     } finally {
       setIsLoading(false);
@@ -123,14 +183,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const login = (userData: User, token: string) => {
     console.log('🔍 AuthContext Debug - Login called with userData:', userData);
     console.log('🔍 AuthContext Debug - User role:', userData.role);
+    console.log('🔍 AuthContext Debug - Token:', token ? 'Present' : 'Missing');
     
-    // Set token in axios defaults
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    if (!token) {
+      console.error('🔍 AuthContext Debug - No token provided to login function');
+      return;
+    }
     
-    // Update state
-    setUser(userData);
-
-    // Store in localStorage
+    // Store in localStorage first (synchronous)
     localStorage.setItem('accessToken', token);
     localStorage.setItem('userRole', userData.role);
     localStorage.setItem('userName', userData.name);
@@ -140,18 +200,42 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.setItem('userPhoto', userData.photoURL);
     }
     
+    // Set token in axios defaults (synchronous)
+    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // Update state (synchronous)
+    setUser(userData);
+    
     console.log('🔍 AuthContext Debug - Data stored in localStorage');
     console.log('🔍 AuthContext Debug - Stored role:', localStorage.getItem('userRole'));
+    console.log('🔍 AuthContext Debug - Auth state updated');
+    console.log('🔍 AuthContext Debug - Axios headers updated');
   };
 
   const logout = async () => {
     try {
-      // Call backend logout endpoint
-      try {
-        await axios.post('https://cautious-zebra-x5549r5475j6f979-5000.app.github.dev/api/auth/logout');
-      } catch (logoutError) {
-        console.warn('Backend logout failed:', logoutError);
-        // Continue with frontend cleanup even if backend logout fails
+      console.log('🔍 AuthContext Debug - Logging out');
+      
+      // Temporarily disable the response interceptor to prevent infinite loops
+      const token = localStorage.getItem('accessToken');
+      
+      if (token) {
+        try {
+          // Call backend logout endpoint
+          await axios.post('/api/auth/logout', {}, {
+            headers: { Authorization: `Bearer ${token}` },
+            // Skip interceptors for this request
+            transformRequest: [(data, headers) => {
+              delete headers.common?.Authorization;
+              headers.Authorization = `Bearer ${token}`;
+              return data;
+            }]
+          });
+          console.log('🔍 AuthContext Debug - Backend logout successful');
+        } catch (logoutError) {
+          console.warn('🔍 AuthContext Debug - Backend logout failed:', (logoutError as any)?.message || logoutError);
+          // Continue with frontend cleanup even if backend logout fails
+        }
       }
       
       // Clear axios default header
@@ -170,8 +254,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Clear any sessionStorage items
       sessionStorage.removeItem('selectedRole');
+      
+      console.log('🔍 AuthContext Debug - Logout completed');
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('🔍 AuthContext Debug - Error during logout:', error);
     }
   };
 
@@ -200,7 +286,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
-    isLoading,
+    isLoading: isLoading || !isInitialized,
     login,
     logout,
     updateUser,

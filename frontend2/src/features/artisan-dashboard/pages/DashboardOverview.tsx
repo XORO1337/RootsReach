@@ -1,6 +1,10 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock, Users } from 'lucide-react';
-import { DashboardStats } from '../types/dashboard';
+import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock, Users, ArrowRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { useArtisanDashboard } from '../../../hooks/useArtisanDashboard';
+import { useArtisanItems } from '../../../hooks/useArtisanItems';
+import { DashboardStats } from '../../../types/dashboard';
+
 
 interface StatCardProps {
   title: string;
@@ -38,40 +42,91 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, change, icon, color }
   );
 };
 
-interface DashboardOverviewProps {
-  stats: DashboardStats;
-}
+const DashboardOverview: React.FC = () => {
+  const { dashboardStats: stats, isLoading, error, refreshData } = useArtisanDashboard();
+  const { items, isLoading: itemsLoading } = useArtisanItems();
 
-const DashboardOverview: React.FC<DashboardOverviewProps> = ({ stats }) => {
+  if (isLoading) {
+    return (
+      <div className="p-6 flex justify-center items-center min-h-96">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="p-6 text-center min-h-96 flex flex-col justify-center">
+        <div className="text-red-500 mb-4">
+          <p className="text-lg font-semibold">Error Loading Dashboard</p>
+          <p className="text-sm">{error || 'Failed to load dashboard data'}</p>
+        </div>
+        <button
+          onClick={refreshData}
+          className="mx-auto bg-orange-500 text-white px-6 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'low-stock': return 'bg-yellow-100 text-yellow-800';
+      case 'inactive': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'active': return 'Active';
+      case 'low-stock': return 'Low Stock';
+      case 'inactive': return 'Inactive';
+      default: return 'Unknown';
+    }
+  };
+
+  // Defensive: fallback to 0 if any stat is undefined/null
+  const currentMonthEarnings = typeof stats?.currentMonthEarnings === 'number' ? stats.currentMonthEarnings : 0;
+  const totalOrders = typeof stats?.totalOrders === 'number' ? stats.totalOrders : 0;
+  const activeOrders = typeof stats?.activeOrders === 'number' ? stats.activeOrders : 0;
+  const pendingDelivery = typeof stats?.pendingDelivery === 'number' ? stats.pendingDelivery : 0;
+
   return (
     <div className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Current Month Earnings"
-          value={`$${stats.currentMonthEarnings.toFixed(2)}`}
-          change={stats.earningsChange}
+          value={`$${Number(currentMonthEarnings).toFixed(2)}`}
+          change={stats?.earningsChange}
           icon={<DollarSign className="w-6 h-6 text-orange-600" />}
           color="bg-orange-50"
         />
         
         <StatCard
           title="Total Orders Served"
-          value={stats.totalOrders.toLocaleString()}
-          change={stats.ordersChange}
+          value={Number(totalOrders).toLocaleString()}
+          change={stats?.ordersChange}
           icon={<ShoppingBag className="w-6 h-6 text-orange-600" />}
           color="bg-orange-50"
         />
         
         <StatCard
           title="Active Orders"
-          value={stats.activeOrders.toString()}
+          value={activeOrders.toString()}
           icon={<Clock className="w-6 h-6 text-orange-600" />}
           color="bg-orange-50"
         />
         
         <StatCard
-          title="Customer Types"
-          value={`${stats.customerTypes.normalBuyers}% / ${stats.customerTypes.distributors}%`}
+          title="Pending Deliveries"
+          value={pendingDelivery.toString()}
           icon={<Users className="w-6 h-6 text-orange-600" />}
           color="bg-orange-50"
         />
@@ -81,9 +136,20 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ stats }) => {
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-gray-900">My Items</h2>
-          <button className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors">
-            + Add New Item
-          </button>
+          <div className="flex space-x-3">
+            <Link 
+              to="/artisan/items"
+              className="text-orange-500 hover:text-orange-600 font-medium flex items-center"
+            >
+              View All <ArrowRight className="w-4 h-4 ml-1" />
+            </Link>
+            <Link
+              to="/artisan/items/new"
+              className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors"
+            >
+              + Add New Item
+            </Link>
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -99,68 +165,53 @@ const DashboardOverview: React.FC<DashboardOverviewProps> = ({ stats }) => {
               </tr>
             </thead>
             <tbody>
-              <tr className="border-b border-gray-100">
-                <td className="py-4 flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded"></div>
-                  <span className="font-medium text-gray-900">Handwoven Silk Scarf</span>
-                </td>
-                <td className="py-4 text-gray-600">Textiles</td>
-                <td className="py-4 text-gray-900">$85.00</td>
-                <td className="py-4 text-gray-900">12</td>
-                <td className="py-4">
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                    Active
-                  </span>
-                </td>
-                <td className="py-4">
-                  <div className="flex space-x-2">
-                    <button className="text-gray-500 hover:text-gray-700">👁</button>
-                    <button className="text-gray-500 hover:text-gray-700">✏️</button>
-                  </div>
-                </td>
-              </tr>
-              
-              <tr className="border-b border-gray-100">
-                <td className="py-4 flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded"></div>
-                  <span className="font-medium text-gray-900">Ceramic Pottery Bowl</span>
-                </td>
-                <td className="py-4 text-gray-600">Ceramics</td>
-                <td className="py-4 text-gray-900">$45.00</td>
-                <td className="py-4 text-gray-900">8</td>
-                <td className="py-4">
-                  <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                    Active
-                  </span>
-                </td>
-                <td className="py-4">
-                  <div className="flex space-x-2">
-                    <button className="text-gray-500 hover:text-gray-700">👁</button>
-                    <button className="text-gray-500 hover:text-gray-700">✏️</button>
-                  </div>
-                </td>
-              </tr>
-              
-              <tr className="border-b border-gray-100">
-                <td className="py-4 flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gray-200 rounded"></div>
-                  <span className="font-medium text-gray-900">Wooden Jewelry Box</span>
-                </td>
-                <td className="py-4 text-gray-600">Woodwork</td>
-                <td className="py-4 text-gray-900">$120.00</td>
-                <td className="py-4 text-gray-900">5</td>
-                <td className="py-4">
-                  <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">
-                    Low Stock
-                  </span>
-                </td>
-                <td className="py-4">
-                  <div className="flex space-x-2">
-                    <button className="text-gray-500 hover:text-gray-700">👁</button>
-                    <button className="text-gray-500 hover:text-gray-700">✏️</button>
-                  </div>
-                </td>
-              </tr>
+              {itemsLoading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500 mx-auto"></div>
+                    <p className="mt-2 text-gray-600">Loading items...</p>
+                  </td>
+                </tr>
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-gray-500">
+                    No items found. Create your first product to get started!
+                  </td>
+                </tr>
+              ) : (
+                items.slice(0, 3).map((item) => (
+                  <tr key={item._id} className="border-b border-gray-100">
+                    <td className="py-4 flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center">
+                        {item.images && item.images[0] ? (
+                          <img 
+                            src={item.images[0]} 
+                            alt={item.name}
+                            className="w-10 h-10 object-cover rounded"
+                          />
+                        ) : (
+                          <span className="text-gray-400 text-xs">No IMG</span>
+                        )}
+                      </div>
+                      <span className="font-medium text-gray-900">{item.name}</span>
+                    </td>
+                    <td className="py-4 text-gray-600">{item.category}</td>
+                    <td className="py-4 text-gray-900">${item.price.toFixed(2)}</td>
+                    <td className="py-4 text-gray-900">{item.stock}</td>
+                    <td className="py-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>
+                        {getStatusText(item.status)}
+                      </span>
+                    </td>
+                    <td className="py-4">
+                      <div className="flex space-x-2">
+                        <button className="text-gray-500 hover:text-gray-700">👁</button>
+                        <button className="text-gray-500 hover:text-gray-700">✏️</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

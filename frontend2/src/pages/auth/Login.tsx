@@ -36,7 +36,6 @@ const Login: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Origin': 'https://cautious-zebra-x5549r5475j6f979-5174.app.github.dev'
         },
         credentials: 'include', // Include cookies for JWT
         body: JSON.stringify({
@@ -46,9 +45,9 @@ const Login: React.FC = () => {
       });
 
       const data = await response.json();
+      console.log('🔍 Login Debug - Backend response:', data);
 
       if (data.success) {
-        console.log('🔍 Login Debug - Backend response:', data);
         console.log('🔍 Login Debug - User role from backend:', data.data.user.role);
         
         // Use the auth context to manage user state
@@ -67,20 +66,19 @@ const Login: React.FC = () => {
         
         login(userData, data.data.accessToken);
         
-        // Redirect rules:
-        // - Customer (or any unknown/default): go to marketplace root '/'
-        // - Artisan: '/artisan'
-        // - Distributor: '/distributor'
-        const role = data.data.user.role;
-        if (role === 'artisan') {
-          console.log('🔍 Login Debug - Redirecting to /artisan');
-          navigate('/artisan');
-        } else if (role === 'distributor') {
-          console.log('🔍 Login Debug - Redirecting to /distributor');
-          navigate('/distributor');
-        } else {
-          console.log('🔍 Login Debug - Redirecting to / (customer or default)');
-          navigate('/');
+        // Redirect based on role
+        switch (userData.role) {
+          case 'artisan':
+            console.log('🔍 Login Debug - Redirecting to /artisan');
+            navigate('/artisan');
+            break;
+          case 'distributor':
+            console.log('🔍 Login Debug - Redirecting to /distributor');
+            navigate('/distributor');
+            break;
+          default:
+            console.log('🔍 Login Debug - Redirecting to / (customer or default)');
+            navigate('/');
         }
       } else {
         setError(data.message || 'Login failed. Please check your credentials.');
@@ -96,7 +94,11 @@ const Login: React.FC = () => {
   const handleGoogleAuth = () => {
     // Store selected role in sessionStorage and redirect to Google OAuth
     sessionStorage.setItem('selectedRole', formData.role);
-    window.location.href = buildGoogleOAuthUrl(formData.role);
+    const googleUrl = buildGoogleOAuthUrl(formData.role);
+    console.log('🔗 Google OAuth URL:', googleUrl);
+    console.log('🌍 Current hostname:', window.location.hostname);
+    console.log('🏠 API Base URL:', API_CONFIG.BASE_URL);
+    window.location.href = googleUrl;
   };
 
   return (

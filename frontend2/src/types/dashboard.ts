@@ -11,6 +11,23 @@ export interface DashboardStats {
   };
 }
 
+export interface Analytics {
+  salesByMonth: {
+    month: string;
+    sales: number;
+  }[];
+  topProducts: {
+    id: string;
+    name: string;
+    sales: number;
+    revenue: number;
+  }[];
+  orderStatus: {
+    status: string;
+    count: number;
+  }[];
+}
+
 export interface InventoryItem {
   id: string;
   name: string;

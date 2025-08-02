@@ -88,7 +88,6 @@ const Signup: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
-          'Origin': 'https://cautious-zebra-x5549r5475j6f979-5174.app.github.dev'
         },
         credentials: 'include',
         body: JSON.stringify(payload),
@@ -132,7 +131,11 @@ const Signup: React.FC = () => {
   const handleGoogleAuth = () => {
     // Store selected role in sessionStorage for OAuth callback
     sessionStorage.setItem('selectedRole', formData.role);
-    window.location.href = buildGoogleOAuthUrl(formData.role);
+    const googleUrl = buildGoogleOAuthUrl(formData.role);
+    console.log('🔗 Google OAuth URL:', googleUrl);
+    console.log('🌍 Current hostname:', window.location.hostname);
+    console.log('🏠 API Base URL:', API_CONFIG.BASE_URL);
+    window.location.href = googleUrl;
   };
 
   return (

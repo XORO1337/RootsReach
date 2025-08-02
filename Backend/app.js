@@ -9,6 +9,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/Auth_route');
 const userRoutes = require('./routes/User_route');
 const artisanRoutes = require('./routes/Artisan_route');
+const artisanDashboardRoutes = require('./routes/ArtisanDashboard_route');
 const distributorRoutes = require('./routes/Distributor_route');
 const productRoutes = require('./routes/Products_route');
 const orderRoutes = require('./routes/Order_route');
@@ -113,6 +114,8 @@ app.use('/api/users', userRoutes);
 
 console.log('Defining artisan routes...');
 app.use('/api/artisans', artisanRoutes);
+
+app.use('/api/artisan-dashboard', artisanDashboardRoutes);
 
 console.log('Defining product routes...');
 app.use('/api/products', productRoutes);
