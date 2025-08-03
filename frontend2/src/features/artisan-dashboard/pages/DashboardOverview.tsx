@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingBag, Clock, Users, ArrowRight } from 'lucide-react';
+import { TrendingUp, TrendingDown, IndianRupee, ShoppingBag, Clock, Users, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useArtisanDashboard } from '../../../hooks/useArtisanDashboard';
 import { useArtisanItems } from '../../../hooks/useArtisanItems';
@@ -103,9 +103,9 @@ const DashboardOverview: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Current Month Earnings"
-          value={`$${Number(currentMonthEarnings).toFixed(2)}`}
+          value={`₹${Number(currentMonthEarnings).toFixed(2)}`}
           change={stats?.earningsChange}
-          icon={<DollarSign className="w-6 h-6 text-orange-600" />}
+          icon={<IndianRupee className="w-6 h-6 text-orange-600" />}
           color="bg-orange-50"
         />
         
@@ -196,7 +196,7 @@ const DashboardOverview: React.FC = () => {
                       <span className="font-medium text-gray-900">{item.name}</span>
                     </td>
                     <td className="py-4 text-gray-600">{item.category}</td>
-                    <td className="py-4 text-gray-900">${item.price.toFixed(2)}</td>
+                    <td className="py-4 text-gray-900">₹{item.price.toFixed(2)}</td>
                     <td className="py-4 text-gray-900">{item.stock}</td>
                     <td className="py-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(item.status)}`}>

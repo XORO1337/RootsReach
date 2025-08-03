@@ -63,16 +63,22 @@ class ArtisanService {
   // Get artisan profile by user ID
   static async getArtisanProfileByUserId(userId) {
     try {
+      console.log('Searching for artisan profile with userId:', userId);
+      
       const artisan = await ArtisanProfile.findOne({ userId })
-        .populate('userId', 'name email phone role');
+        .populate('userId', 'name email phone role')
+        .exec();
       
       if (!artisan) {
-        throw new Error('Artisan profile not found for this user');
+        console.log('No artisan profile found for userId:', userId);
+        return null;
       }
       
+      console.log('Found artisan profile:', artisan._id);
       return artisan;
     } catch (error) {
-      throw new Error(`Error fetching artisan profile by user ID: ${error.message}`);
+      console.error('Database error when fetching artisan profile:', error);
+      throw error;
     }
   }
 

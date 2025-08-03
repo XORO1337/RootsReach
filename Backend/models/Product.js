@@ -27,6 +27,11 @@ const productSchema = new Schema({
     required: true,
     min: 0
   },
+  weightUnit: {
+    type: String,
+    enum: ['g', 'kg','piece', 'liter', 'ml', 'dozen'],
+    default: 'g'
+  },
   stock: {
     type: Number,
     required: true,
@@ -39,7 +44,7 @@ const productSchema = new Schema({
   },
   status: {
     type: String,
-    enum: ['active', 'out_of_stock', 'discontinued'],
+    enum: ['active', 'inactive', 'low-stock'],
     default: 'active'
   }
 }, {

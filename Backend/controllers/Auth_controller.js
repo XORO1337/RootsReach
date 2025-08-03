@@ -247,6 +247,22 @@ class AuthController {
         console.log('🎯 OAuth Callback - User is new:', user._isNewUser);
         console.log('🎯 OAuth Callback - Current user role:', user.role);
         
+        // Always try to create/verify role-specific profile
+        if (selectedRole === 'artisan' || selectedRole === 'distributor') {
+          try {
+            await AuthController.createRoleSpecificProfile(user._id, selectedRole, {
+              region: 'Default Region', // Provide a default region for artisans
+              skills: [], // Empty skills array for artisans
+              businessName: '', // Empty business details for distributors
+              licenseNumber: '',
+              distributionAreas: []
+            });
+          } catch (profileErr) {
+            console.error('Failed to create role-specific profile:', profileErr);
+            return res.redirect(`${process.env.CLIENT_URL}/auth/callback?error=profile_creation_failed`);
+          }
+        }
+        
         // Update user role if it was selected (for both new and existing users)
         if (selectedRole && selectedRole !== 'customer') {
           console.log('🔄 Updating user role from', user.role, 'to', selectedRole);
@@ -742,14 +758,31 @@ class AuthController {
 
     try {
       if (role === 'artisan') {
+        // Check if profile already exists
+        const existingProfile = await ArtisanProfile.findOne({ userId });
+        if (existingProfile) {
+          console.log('Artisan profile already exists for user:', userId);
+          return;
+        }
+
+        console.log('Creating new artisan profile for user:', userId);
         const artisanProfile = new ArtisanProfile({
           userId,
           bio: profileData.bio || '',
-          region: profileData.region || '',
+          region: profileData.region || 'Default Region',  // Always provide a default region
           skills: profileData.skills || []
         });
         await artisanProfile.save();
+        console.log('Created artisan profile:', artisanProfile._id);
       } else if (role === 'distributor') {
+        // Check if profile already exists
+        const existingProfile = await Distributor.findOne({ userId });
+        if (existingProfile) {
+          console.log('Distributor profile already exists for user:', userId);
+          return;
+        }
+
+        console.log('Creating new distributor profile for user:', userId);
         const distributorProfile = new Distributor({
           userId,
           businessName: profileData.businessName || '',
@@ -757,10 +790,11 @@ class AuthController {
           distributionAreas: profileData.distributionAreas || []
         });
         await distributorProfile.save();
+        console.log('Created distributor profile:', distributorProfile._id);
       }
     } catch (error) {
       console.error('Error creating role-specific profile:', error);
-      // Don't throw error here to avoid breaking the main registration flow
+      throw error; // Throw error to handle it in the calling method
     }
   }
 }

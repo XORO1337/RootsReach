@@ -17,11 +17,11 @@ const createProduct = async (req, res) => {
   }
 };
 
-// Get all products (basic listing)
+// Get all products (enhanced with better filtering)
 const getAllProducts = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 12;
     const filters = {};
 
     // Build filters from query parameters
@@ -32,6 +32,11 @@ const getAllProducts = async (req, res) => {
     if (req.query.maxPrice) filters.maxPrice = parseFloat(req.query.maxPrice);
     if (req.query.status) filters.status = req.query.status;
     if (req.query.minStock !== undefined) filters.minStock = parseInt(req.query.minStock);
+    if (req.query.artisanLocation) filters.artisanLocation = req.query.artisanLocation;
+    
+    // Add sorting
+    if (req.query.sortBy) filters.sortBy = req.query.sortBy;
+    if (req.query.sortOrder) filters.sortOrder = req.query.sortOrder;
 
     const result = await ProductService.getAllProducts(page, limit, filters);
     res.status(200).json({
@@ -180,20 +185,25 @@ const getLowStockProducts = async (req, res) => {
   }
 };
 
-// Search products
+// Enhanced search products with advanced filtering
 const searchProducts = async (req, res) => {
   try {
     const searchTerm = req.query.q;
-    if (!searchTerm) {
-      return res.status(400).json({
-        success: false,
-        message: 'Search term is required (use ?q=searchterm)'
-      });
-    }
-
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const result = await ProductService.searchProducts(searchTerm, page, limit);
+    const limit = parseInt(req.query.limit) || 12;
+    
+    // Build filters object from query parameters
+    const filters = {};
+    if (req.query.category) filters.category = req.query.category;
+    if (req.query.minPrice) filters.minPrice = req.query.minPrice;
+    if (req.query.maxPrice) filters.maxPrice = req.query.maxPrice;
+    if (req.query.status) filters.status = req.query.status;
+    if (req.query.sortBy) filters.sortBy = req.query.sortBy;
+    if (req.query.sortOrder) filters.sortOrder = req.query.sortOrder;
+    if (req.query.inStockOnly === 'true') filters.inStockOnly = true;
+    if (req.query.artisanLocation) filters.artisanLocation = req.query.artisanLocation;
+
+    const result = await ProductService.searchProducts(searchTerm, page, limit, filters);
     res.status(200).json({
       success: true,
       message: 'Products search completed successfully',

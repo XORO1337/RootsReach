@@ -2,6 +2,7 @@ const ArtisanService = require('../services/Artisan_serv');
 const ProductService = require('../services/Product_serv');
 const OrderService = require('../services/Order_serv');
 const InventoryService = require('../services/Inventory_serv');
+const ImageKitService = require('../services/imageKitService');
 const User = require('../models/User');
 const Order = require('../models/Orders');
 const Product = require('../models/Product');
@@ -12,15 +13,42 @@ class ArtisanDashboardController {
   static async getDashboardStats(req, res) {
     try {
       const artisanId = req.user.id;
+      console.log('Fetching dashboard stats for artisan:', artisanId);
 
       // Get artisan profile
-      const artisan = await ArtisanService.getArtisanProfileByUserId(artisanId);
+      let artisan;
+      try {
+        artisan = await ArtisanService.getArtisanProfileByUserId(artisanId);
+      } catch (err) {
+        console.error('Error fetching artisan profile:', err);
+        
+        // If profile doesn't exist, create a default one
+        if (err.message.includes('not found')) {
+          try {
+            artisan = await ArtisanService.createArtisanProfile({
+              userId: artisanId,
+              region: 'Default Region',
+              skills: []
+            });
+            console.log('Created default artisan profile:', artisan._id);
+          } catch (createErr) {
+            console.error('Error creating default artisan profile:', createErr);
+            throw createErr;
+          }
+        } else {
+          throw err;
+        }
+      }
+
       if (!artisan) {
+        console.log('No artisan profile found for user:', artisanId);
         return res.status(404).json({
           success: false,
-          message: 'Artisan profile not found'
+          message: 'Artisan profile not found and could not be created'
         });
       }
+
+      console.log('Using artisan profile:', artisan._id);
 
       // Current month date range
       const currentDate = new Date();
@@ -97,9 +125,20 @@ class ArtisanDashboardController {
 
     } catch (error) {
       console.error('Dashboard stats error:', error);
-      res.status(500).json({
+      let statusCode = 500;
+      let message = 'Failed to retrieve dashboard statistics';
+      
+      if (error.message === 'Artisan profile not found for this user') {
+        statusCode = 404;
+        message = 'Artisan profile not found';
+      } else if (error.name === 'ValidationError') {
+        statusCode = 400;
+        message = 'Invalid data format';
+      }
+      
+      res.status(statusCode).json({
         success: false,
-        message: 'Failed to retrieve dashboard statistics',
+        message,
         error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
@@ -109,15 +148,42 @@ class ArtisanDashboardController {
   static async getAnalytics(req, res) {
     try {
       const artisanId = req.user.id;
+      console.log('Fetching analytics for artisan:', artisanId);
 
       // Get artisan profile
-      const artisan = await ArtisanService.getArtisanProfileByUserId(artisanId);
+      let artisan;
+      try {
+        artisan = await ArtisanService.getArtisanProfileByUserId(artisanId);
+      } catch (err) {
+        console.error('Error fetching artisan profile:', err);
+        
+        // If profile doesn't exist, create a default one
+        if (err.message.includes('not found')) {
+          try {
+            artisan = await ArtisanService.createArtisanProfile({
+              userId: artisanId,
+              region: 'Default Region',
+              skills: []
+            });
+            console.log('Created default artisan profile:', artisan._id);
+          } catch (createErr) {
+            console.error('Error creating default artisan profile:', createErr);
+            throw createErr;
+          }
+        } else {
+          throw err;
+        }
+      }
+
       if (!artisan) {
+        console.log('No artisan profile found for user:', artisanId);
         return res.status(404).json({
           success: false,
-          message: 'Artisan profile not found'
+          message: 'Artisan profile not found and could not be created'
         });
       }
+
+      console.log('Using artisan profile:', artisan._id);
 
       // Sales by month (last 12 months)
       const twelveMonthsAgo = new Date();
@@ -228,9 +294,20 @@ class ArtisanDashboardController {
 
     } catch (error) {
       console.error('Analytics error:', error);
-      res.status(500).json({
+      let statusCode = 500;
+      let message = 'Failed to retrieve analytics data';
+      
+      if (error.message === 'Artisan profile not found for this user') {
+        statusCode = 404;
+        message = 'Artisan profile not found';
+      } else if (error.name === 'ValidationError') {
+        statusCode = 400;
+        message = 'Invalid data format';
+      }
+      
+      res.status(statusCode).json({
         success: false,
-        message: 'Failed to retrieve analytics data',
+        message,
         error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
@@ -246,11 +323,34 @@ class ArtisanDashboardController {
       const category = req.query.category;
 
       // Get artisan profile
-      const artisan = await ArtisanService.getArtisanProfileByUserId(artisanId);
-      if (!artisan) {
-        return res.status(404).json({
+      let artisan;
+      try {
+        artisan = await ArtisanService.getArtisanProfileByUserId(artisanId);
+        
+        // If no profile exists, create one
+        if (!artisan) {
+          console.log('Creating default artisan profile for user:', artisanId);
+          artisan = await ArtisanService.createArtisanProfile({
+            userId: artisanId,
+            region: 'Default Region',
+            skills: []
+          });
+          console.log('Created new artisan profile:', artisan._id);
+        }
+      } catch (err) {
+        console.error('Error with artisan profile:', err);
+        return res.status(500).json({
           success: false,
-          message: 'Artisan profile not found'
+          message: 'Failed to manage artisan profile',
+          error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
+        });
+      }
+
+      if (!artisan) {
+        console.log('Failed to create artisan profile for user:', artisanId);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to create artisan profile'
         });
       }
 
@@ -417,10 +517,35 @@ class ArtisanDashboardController {
         });
       }
 
-      // Add artisan ID to product data
+      // Handle image uploads if present (files uploaded with form)
+      let imageUrls = [];
+      if (req.files && req.files.length > 0) {
+        try {
+          const uploadResult = await ImageKitService.uploadMultipleImages(
+            req.files, 
+            `products/artisan_${artisan._id}`
+          );
+          imageUrls = uploadResult.data.map(img => img.url);
+        } catch (imageError) {
+          console.error('Image upload error:', imageError);
+          return res.status(400).json({
+            success: false,
+            message: 'Failed to upload images',
+            error: imageError.message
+          });
+        }
+      }
+      
+      // Handle pre-uploaded image URLs from body
+      if (req.body.images && Array.isArray(req.body.images) && req.body.images.length > 0) {
+        imageUrls = req.body.images;
+      }
+
+      // Add artisan ID and images to product data
       const productData = {
         ...req.body,
-        artisanId: artisan._id
+        artisanId: artisan._id,
+        images: imageUrls
       };
 
       const product = await ProductService.createProduct(productData);
@@ -525,6 +650,82 @@ class ArtisanDashboardController {
       res.status(500).json({
         success: false,
         message: 'Failed to delete product',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  }
+
+  // Upload images for products
+  static async uploadProductImages(req, res) {
+    try {
+      const artisanId = req.user.id;
+
+      // Get artisan profile
+      const artisan = await ArtisanService.getArtisanProfileByUserId(artisanId);
+      if (!artisan) {
+        return res.status(404).json({
+          success: false,
+          message: 'Artisan profile not found'
+        });
+      }
+
+      // Check if files are present
+      if (!req.files || req.files.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No images provided for upload'
+        });
+      }
+
+      try {
+        const uploadResult = await ImageKitService.uploadMultipleImages(
+          req.files, 
+          `products/artisan_${artisan._id}`
+        );
+
+        res.status(200).json({
+          success: true,
+          message: 'Images uploaded successfully',
+          data: {
+            images: uploadResult.data,
+            urls: uploadResult.data.map(img => img.url)
+          }
+        });
+
+      } catch (imageError) {
+        console.error('Image upload error:', imageError);
+        res.status(400).json({
+          success: false,
+          message: 'Failed to upload images',
+          error: imageError.message
+        });
+      }
+
+    } catch (error) {
+      console.error('Upload images error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to upload images',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  }
+
+  // Get ImageKit authentication parameters for frontend uploads
+  static async getImageUploadAuth(req, res) {
+    try {
+      const authParams = ImageKitService.getAuthenticationParameters();
+      
+      res.status(200).json({
+        success: true,
+        message: 'ImageKit authentication parameters retrieved',
+        data: authParams.data
+      });
+    } catch (error) {
+      console.error('Get image upload auth error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to get authentication parameters',
         error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }

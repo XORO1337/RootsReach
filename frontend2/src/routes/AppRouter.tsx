@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Marketplace from '../pages/Marketplace';
+import SearchResults from '../pages/SearchResults';
 import ArtisanDashboard from '../features/artisan-dashboard';
 import NotFound from '../pages/NotFound';
 import { Login, Signup, OAuthCallback } from '../pages/auth';
@@ -13,16 +14,16 @@ import ProtectedRoute from '../components/ProtectedRoute';
 import AuthDebugPanel from '../components/AuthDebugPanel';
 import { AdminAuthProvider } from '../contexts';
 import { AuthProvider } from '../contexts/AuthContext';
-import DebugOAuth from '../pages/DebugOAuth';
+import { CartProvider } from '../contexts/CartContext';
+
 
 const AppRouter: React.FC = () => {
   return (
     <AuthProvider>
-      <AdminAuthProvider>
-        <Router>
+      <CartProvider>
+        <AdminAuthProvider>
+          <Router>
           <Routes>
-            {/* Debug Route */}
-            <Route path="/debug" element={<DebugOAuth />} />
             
             {/* Authentication Routes */}
             <Route path="/login" element={<Login />} />
@@ -50,6 +51,7 @@ const AppRouter: React.FC = () => {
             
             {/* Marketplace Routes */}
             <Route path="/" element={<Marketplace />} />
+            <Route path="/search" element={<SearchResults />} />
             <Route path="/marketplace" element={<Navigate to="/" replace />} />
             
             {/* Artisan Dashboard Routes */}
@@ -93,6 +95,7 @@ const AppRouter: React.FC = () => {
           <AuthDebugPanel />
         </Router>
       </AdminAuthProvider>
+      </CartProvider>
     </AuthProvider>
   );
 };

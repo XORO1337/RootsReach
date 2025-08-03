@@ -9,7 +9,6 @@ import Deliveries from './pages/Deliveries';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
 import { NavigationPage } from '../../types/dashboard';
-import { dashboardStats, inventoryItems, orders, deliveries, analytics } from '../../data/dashboardData';
 
 const ArtisanDashboard: React.FC = () => {
   const location = useLocation();
@@ -62,10 +61,10 @@ const ArtisanDashboard: React.FC = () => {
           <Routes>
             <Route index element={<DashboardOverview />} />
             <Route path="dashboard" element={<Navigate to="/artisan" replace />} />
-            <Route path="items" element={<MyItems items={inventoryItems} />} />
-            <Route path="orders" element={<Orders orders={orders} />} />
-            <Route path="deliveries" element={<Deliveries deliveries={deliveries} />} />
-            <Route path="analytics" element={<Analytics analytics={analytics} />} />
+            <Route path="items" element={<MyItems />} />
+            <Route path="orders" element={<Orders />} />
+            <Route path="deliveries" element={<Deliveries />} />
+            <Route path="analytics" element={<Analytics />} />
             <Route path="settings" element={<Settings />} />
             <Route path="*" element={<Navigate to="/artisan" replace />} />
           </Routes>

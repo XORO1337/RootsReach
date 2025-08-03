@@ -7,6 +7,7 @@ export interface ArtisanItem {
   description: string;
   category: string;
   price: number;
+  weightUnit?: string;
   stock: number;
   status: 'active' | 'inactive' | 'low-stock';
   images?: string[];
@@ -19,8 +20,9 @@ export interface CreateItemData {
   description: string;
   category: string;
   price: number;
+  weightUnit?: string;
   stock: number;
-  status?: 'active' | 'inactive';
+  status?: 'active' | 'inactive' | 'low-stock';
   images?: string[];
 }
 

@@ -23,6 +23,23 @@ export const API_CONFIG = {
       GOOGLE_OAUTH: '/api/auth/google',
       PROFILE: '/api/auth/profile',
       LOGOUT: '/api/auth/logout',
+    },
+    PRODUCTS: {
+      BASE: '/api/products',
+      SEARCH: '/api/products/search',
+      CATEGORIES: '/api/products/categories',
+      BY_CATEGORY: '/api/products/by-category',
+      BY_ARTISAN: '/api/products/by-artisan',
+      FEATURED: '/api/products/featured',
+    },
+    ARTISANS: {
+      BASE: '/api/artisans',
+      SEARCH_BY_SKILLS: '/api/artisans/search/skills',
+      SEARCH_BY_REGION: '/api/artisans/search/region',
+    },
+    ORDERS: {
+      BASE: '/api/orders',
+      SEARCH: '/api/orders/search',
     }
   }
 } as const;

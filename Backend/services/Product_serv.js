@@ -33,7 +33,7 @@ class ProductService {
     }
   }
 
-  // Get all products with optional pagination and filters
+  // Get all products with optional pagination, filters and sorting
   static async getAllProducts(page = 1, limit = 10, filters = {}) {
     try {
       const skip = (page - 1) * limit;
@@ -47,7 +47,11 @@ class ProductService {
         query.name = { $regex: filters.name, $options: 'i' };
       }
       if (filters.artisanId) {
+        // If specific artisan is requested, use that instead of null filter
         query.artisanId = filters.artisanId;
+      } else {
+        // Always filter out products without artisans (data integrity)
+        query.artisanId = { $exists: true, $ne: null };
       }
       if (filters.minPrice && filters.maxPrice) {
         query.price = { $gte: filters.minPrice, $lte: filters.maxPrice };
@@ -63,13 +67,45 @@ class ProductService {
         query.stock = { $gte: filters.minStock };
       }
 
-      const products = await Product.find(query)
-        .populate('artisanId', 'name email phone')
+      // Build sort object
+      let sortObject = { createdAt: -1 }; // default sort
+      if (filters.sortBy) {
+        sortObject = {};
+        sortObject[filters.sortBy] = filters.sortOrder === 'asc' ? 1 : -1;
+      }
+
+      // First find products matching basic criteria
+      let products = await Product.find(query)
+        .populate('artisanId', 'name email phone city state')
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 });
+        .sort(sortObject);
 
-      const total = await Product.countDocuments(query);
+      // Apply artisan location filter after population if specified
+      if (filters.artisanLocation) {
+        const locationRegex = new RegExp(filters.artisanLocation, 'i');
+        products = products.filter(product => 
+          product.artisanId && (
+            (product.artisanId.city && locationRegex.test(product.artisanId.city)) ||
+            (product.artisanId.state && locationRegex.test(product.artisanId.state))
+          )
+        );
+      }
+
+      // Get total count (this is approximate when location filter is applied)
+      let total = await Product.countDocuments(query);
+      
+      // If location filter is applied, we need to adjust the count
+      if (filters.artisanLocation) {
+        const allProducts = await Product.find(query).populate('artisanId', 'city state');
+        const locationRegex = new RegExp(filters.artisanLocation, 'i');
+        total = allProducts.filter(product => 
+          product.artisanId && (
+            (product.artisanId.city && locationRegex.test(product.artisanId.city)) ||
+            (product.artisanId.state && locationRegex.test(product.artisanId.state))
+          )
+        ).length;
+      }
 
       return {
         products,
@@ -237,27 +273,89 @@ class ProductService {
     }
   }
 
-  // Search products
-  static async searchProducts(searchTerm, page = 1, limit = 10) {
+  // Enhanced search products with advanced filtering
+  static async searchProducts(searchTerm, page = 1, limit = 10, filters = {}) {
     try {
       const skip = (page - 1) * limit;
-      const searchRegex = { $regex: searchTerm, $options: 'i' };
-      
-      const query = {
-        $or: [
+      const query = {};
+
+      // Text search
+      if (searchTerm) {
+        const searchRegex = { $regex: searchTerm, $options: 'i' };
+        query.$or = [
           { name: searchRegex },
           { description: searchRegex },
           { category: searchRegex }
-        ]
-      };
+        ];
+      }
 
-      const products = await Product.find(query)
-        .populate('artisanId', 'name email phone')
+      // Always filter out products without artisans (data integrity)
+      query.artisanId = { $exists: true, $ne: null };
+
+      // Category filter
+      if (filters.category) {
+        query.category = { $regex: filters.category, $options: 'i' };
+      }
+
+      // Price range filter
+      if (filters.minPrice || filters.maxPrice) {
+        query.price = {};
+        if (filters.minPrice) query.price.$gte = parseFloat(filters.minPrice);
+        if (filters.maxPrice) query.price.$lte = parseFloat(filters.maxPrice);
+      }
+
+      // Status filter
+      if (filters.status) {
+        query.status = filters.status;
+      }
+
+      // Stock filter (only show in-stock items)
+      if (filters.inStockOnly) {
+        query.stock = { $gt: 0 };
+      }
+
+      // Build sort object
+      let sortObject = { createdAt: -1 }; // default sort
+      if (filters.sortBy) {
+        sortObject = {};
+        sortObject[filters.sortBy] = filters.sortOrder === 'asc' ? 1 : -1;
+      }
+
+      // First find products matching basic criteria
+      let productsQuery = Product.find(query)
+        .populate('artisanId', 'name email phone city state')
         .skip(skip)
         .limit(limit)
-        .sort({ createdAt: -1 });
+        .sort(sortObject);
 
-      const total = await Product.countDocuments(query);
+      let products = await productsQuery;
+
+      // Apply artisan location filter after population if specified
+      if (filters.artisanLocation) {
+        const locationRegex = new RegExp(filters.artisanLocation, 'i');
+        products = products.filter(product => 
+          product.artisanId && (
+            (product.artisanId.city && locationRegex.test(product.artisanId.city)) ||
+            (product.artisanId.state && locationRegex.test(product.artisanId.state))
+          )
+        );
+      }
+
+      // Get total count (this is approximate when location filter is applied)
+      let total = await Product.countDocuments(query);
+      
+      // If location filter is applied, we need to adjust the count
+      if (filters.artisanLocation) {
+        // This is a simplified approach - in production you might want to use aggregation
+        const allProducts = await Product.find(query).populate('artisanId', 'city state');
+        const locationRegex = new RegExp(filters.artisanLocation, 'i');
+        total = allProducts.filter(product => 
+          product.artisanId && (
+            (product.artisanId.city && locationRegex.test(product.artisanId.city)) ||
+            (product.artisanId.state && locationRegex.test(product.artisanId.state))
+          )
+        ).length;
+      }
 
       return {
         products,

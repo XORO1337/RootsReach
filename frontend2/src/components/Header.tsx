@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Menu, X, Heart, User, LogOut } from 'lucide-react';
 import { FilterState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
@@ -14,10 +14,28 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, onFiltersChange }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(filters.search || '');
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onFiltersChange({ ...filters, search: e.target.value });
+    const value = e.target.value;
+    setSearchQuery(value);
+    onFiltersChange({ ...filters, search: value });
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to search page with query
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleSearchButtonClick = () => {
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   return (
@@ -71,7 +89,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
 
           {/* Search Bar - Desktop */}
           <div className="hidden lg:flex flex-1 max-w-2xl mx-8">
-            <div className="relative w-full group">
+            <form onSubmit={handleSearchSubmit} className="relative w-full group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400 group-focus-within:text-orange-500 transition-colors" />
               </div>
@@ -79,13 +97,17 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                 type="text"
                 placeholder="Search for handmade crafts, artisans, or cities..."
                 className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all duration-200 text-gray-700 placeholder-gray-400"
-                value={filters.search}
+                value={searchQuery}
                 onChange={handleSearchChange}
               />
-              <button className="absolute inset-y-0 right-0 px-6 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-r-xl hover:from-orange-700 hover:to-orange-600 transition-all duration-200 font-medium shadow-lg hover:shadow-xl">
+              <button
+                type="button"
+                onClick={handleSearchButtonClick}
+                className="absolute inset-y-0 right-0 px-6 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-r-xl hover:from-orange-700 hover:to-orange-600 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+              >
                 Search
               </button>
-            </div>
+            </form>
           </div>
 
           {/* Right Side Actions */}
@@ -199,7 +221,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
 
       {/* Mobile Search */}
       <div className="lg:hidden px-4 pb-4 bg-gray-50">
-        <div className="relative group">
+        <form onSubmit={handleSearchSubmit} className="relative group">
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search className="h-5 w-5 text-gray-400 group-focus-within:text-orange-500 transition-colors" />
           </div>
@@ -207,10 +229,10 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
             type="text"
             placeholder="Search crafts, artisans..."
             className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all duration-200"
-            value={filters.search}
+            value={searchQuery}
             onChange={handleSearchChange}
           />
-        </div>
+        </form>
       </div>
 
 

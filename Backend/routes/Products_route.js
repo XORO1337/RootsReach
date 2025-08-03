@@ -83,6 +83,11 @@ if (typeof authenticateUser !== 'function') {
 router.get('/categories', controllerMethods.getProductCategories || ProductController.getProductCategories);
 router.get('/popular', controllerMethods.getPopularProducts || ProductController.getPopularProducts);
 
+// Search and filter routes - PUBLIC for browsing
+if (controllerMethods.searchProducts) {
+  router.get('/search', controllerMethods.searchProducts);
+}
+
 // Main products listing - PUBLIC for browsing (distributors need to browse products)
 router.get('/', controllerMethods.getAllProducts || ProductController.getAllProducts);
 
@@ -98,9 +103,6 @@ if (controllerMethods.getLowStockAlert) {
 }
 
 // Search and filter routes (must come before /:id route)
-if (controllerMethods.searchProducts) {
-  router.get('/search', authenticateUser, controllerMethods.searchProducts);
-}
 if (controllerMethods.getProductsByPriceRange) {
   router.get('/price-range', authenticateUser, controllerMethods.getProductsByPriceRange);
 }

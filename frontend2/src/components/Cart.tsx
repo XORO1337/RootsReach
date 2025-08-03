@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { CartItem } from '../types';
 import { X, Minus, Plus, ShoppingBag, Truck } from 'lucide-react';
+import { formatWeightUnit } from '../utils/formatters';
 
 interface CartProps {
   isOpen: boolean;
@@ -87,7 +88,7 @@ const Cart: React.FC<CartProps> = ({
                         by {item.product.seller.name}
                       </p>
                       <p className="text-sm font-semibold text-gray-900">
-                        ₹{item.product.price.toLocaleString()}
+                        ₹{item.product.price.toLocaleString()}/{formatWeightUnit(item.product.weightUnit)}
                       </p>
                     </div>
                     <div className="flex items-center space-x-2">

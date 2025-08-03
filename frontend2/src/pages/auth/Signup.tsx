@@ -110,12 +110,13 @@ const Signup: React.FC = () => {
         login(userData, data.data.accessToken);
 
         // Redirect based on role
-        if (formData.role === 'artisan') {
+        const role = data.data.role ;
+        if (role === 'artisan') {
           navigate('/artisan');
-        } else if (formData.role === 'distributor') {
+        } else if (role === 'distributor') {
           navigate('/distributor');
         } else {
-          navigate('/marketplace');
+          navigate('/');
         }
       } else {
         setError(data.message || 'Registration failed. Please try again.');

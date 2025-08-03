@@ -1,12 +1,21 @@
 import React, { useState } from 'react';
-import { Search, Filter, Eye, Edit, Trash2, Plus } from 'lucide-react';
-import { useArtisanItems } from '../../../hooks/useArtisanItems';
+import { Search, Eye, Edit, Trash2, Package } from 'lucide-react';
+import { useArtisanItems, ArtisanItem } from '../../../hooks/useArtisanItems';
+import AddItemModal from '../components/AddItemModal';
+import EditItemModal from '../components/EditItemModal';
+import ViewItemModal from '../components/ViewItemModal';
 
 const MyItems: React.FC = () => {
-  const { items, isLoading, error, pagination, fetchItems, deleteItem, setError } = useArtisanItems();
+  const { items, isLoading, error, fetchItems, createItem, updateItem, deleteItem, setError } = useArtisanItems();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
   const [statusFilter, setStatusFilter] = useState('All Status');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<ArtisanItem | undefined>(undefined);
+  const [isCreatingItem, setIsCreatingItem] = useState(false);
+  const [isUpdatingItem, setIsUpdatingItem] = useState(false);
 
   if (isLoading) {
     return (
@@ -49,15 +58,6 @@ const MyItems: React.FC = () => {
     }
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'active': return 'Active';
-      case 'low-stock': return 'Low Stock';
-      case 'inactive': return 'Inactive';
-      default: return status;
-    }
-  };
-
   const handleDeleteItem = async (itemId: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
       try {
@@ -66,6 +66,53 @@ const MyItems: React.FC = () => {
         console.error('Failed to delete item:', error);
       }
     }
+  };
+
+  const handleAddItem = async (itemData: any) => {
+    setIsCreatingItem(true);
+    try {
+      await createItem(itemData);
+      // The items list will be automatically refreshed by the hook
+    } catch (error) {
+      console.error('Failed to add item:', error);
+      throw error; // Re-throw to let the modal handle the error
+    } finally {
+      setIsCreatingItem(false);
+    }
+  };
+
+  const handleEditItem = (item: ArtisanItem) => {
+    setSelectedItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  const handleViewItem = (item: ArtisanItem) => {
+    setSelectedItem(item);
+    setIsViewModalOpen(true);
+  };
+
+  const handleUpdateItem = async (itemId: string, itemData: any) => {
+    setIsUpdatingItem(true);
+    try {
+      await updateItem(itemId, itemData);
+      setIsEditModalOpen(false);
+      setSelectedItem(undefined);
+    } catch (error) {
+      console.error('Failed to update item:', error);
+      throw error; // Re-throw to let the modal handle the error
+    } finally {
+      setIsUpdatingItem(false);
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setSelectedItem(undefined);
+  };
+
+  const handleCloseViewModal = () => {
+    setIsViewModalOpen(false);
+    setSelectedItem(undefined);
   };
 
   const totalItems = items.length;
@@ -95,7 +142,10 @@ const MyItems: React.FC = () => {
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Items Inventory</h2>
-            <button className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors">
+            <button 
+              onClick={() => setIsAddModalOpen(true)}
+              className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors flex items-center"
+            >
               + Add New Item
             </button>
           </div>
@@ -131,8 +181,8 @@ const MyItems: React.FC = () => {
               >
                 <option>All Status</option>
                 <option>active</option>
-                <option>low-stock</option>
                 <option>inactive</option>
+                <option>low-stock</option>
               </select>
             </div>
           </div>
@@ -156,10 +206,22 @@ const MyItems: React.FC = () => {
                 <tr key={item._id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gray-200 rounded mr-3"></div>
+                      <div className="w-10 h-10 bg-gray-200 rounded mr-3 overflow-hidden">
+                        {item.images && item.images.length > 0 ? (
+                          <img 
+                            src={item.images[0]} 
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            <Package className="w-4 h-4" />
+                          </div>
+                        )}
+                      </div>
                       <div>
                         <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                        <div className="text-sm text-gray-500">{item.description}</div>
+                        <div className="text-sm text-gray-500">{item.description.length > 50 ? `${item.description.substring(0, 50)}...` : item.description}</div>
                       </div>
                     </div>
                   </td>
@@ -173,15 +235,24 @@ const MyItems: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-3">
-                      <button className="text-indigo-600 hover:text-indigo-900">
+                      <button 
+                        onClick={() => handleViewItem(item)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                        title="View details"
+                      >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button className="text-gray-600 hover:text-gray-900">
+                      <button 
+                        onClick={() => handleEditItem(item)}
+                        className="text-gray-600 hover:text-gray-900"
+                        title="Edit item"
+                      >
                         <Edit className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => handleDeleteItem(item._id)}
                         className="text-red-600 hover:text-red-900"
+                        title="Delete item"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -193,6 +264,30 @@ const MyItems: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Add Item Modal */}
+      <AddItemModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAddItem={handleAddItem}
+        isLoading={isCreatingItem}
+      />
+
+      {/* Edit Item Modal */}
+      <EditItemModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseEditModal}
+        onUpdateItem={handleUpdateItem}
+        item={selectedItem}
+        isLoading={isUpdatingItem}
+      />
+
+      {/* View Item Modal */}
+      <ViewItemModal
+        isOpen={isViewModalOpen}
+        onClose={handleCloseViewModal}
+        item={selectedItem}
+      />
     </div>
   );
 };

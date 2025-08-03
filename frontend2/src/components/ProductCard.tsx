@@ -1,20 +1,145 @@
 import React from 'react';
 import { Product } from '../types';
 import { Star, MapPin, ShoppingCart, Eye } from 'lucide-react';
+import { formatWeightUnit } from '../utils/formatters';
 
 interface ProductCardProps {
   product: Product;
   onAddToCart: (product: Product) => void;
   onViewDetails: (product: Product) => void;
   onViewSeller: (sellerId: string) => void;
+  viewMode?: 'grid' | 'list';
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ 
   product, 
   onAddToCart, 
   onViewDetails, 
-  onViewSeller 
+  onViewSeller,
+  viewMode = 'grid'
 }) => {
+  if (viewMode === 'list') {
+    return (
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+        <div className="flex">
+          {/* Product Image */}
+          <div className="relative w-48 h-48 flex-shrink-0">
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full h-full object-cover"
+            />
+            {product.originalPrice && (
+              <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-semibold">
+                {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
+              </div>
+            )}
+            {!product.inStock && (
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                <span className="text-white font-semibold text-sm">Out of Stock</span>
+              </div>
+            )}
+          </div>
+
+          {/* Product Info */}
+          <div className="flex-1 p-6">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex-1">
+                {/* Category */}
+                <span className="inline-block text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full font-medium mb-2">
+                  {product.craftType}
+                </span>
+                
+                {/* Product Name */}
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {product.name}
+                </h3>
+
+                {/* Description */}
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                  {product.description}
+                </p>
+
+                {/* Seller Info */}
+                <div
+                  onClick={() => onViewSeller(product.seller.id)}
+                  className="flex items-center mb-3 hover:text-orange-600 cursor-pointer transition-colors"
+                >
+                  <img
+                    src={product.seller.avatar}
+                    alt={product.seller.name}
+                    className="w-6 h-6 rounded-full mr-2"
+                  />
+                  <span className="text-sm text-gray-600">by {product.seller.name}</span>
+                  <div className="flex items-center text-xs text-gray-500 ml-4">
+                    <MapPin className="h-3 w-3 mr-1" />
+                    {product.seller.city}
+                  </div>
+                </div>
+
+                {/* Rating */}
+                <div className="flex items-center">
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`h-4 w-4 ${
+                          i < Math.floor(product.rating)
+                            ? 'text-yellow-400 fill-current'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-600 ml-2">
+                    {product.rating} ({product.reviews} reviews)
+                  </span>
+                </div>
+              </div>
+
+              {/* Price and Actions */}
+              <div className="text-right ml-6">
+                <div className="mb-4">
+                  <div className="text-2xl font-bold text-gray-900">
+                    ₹{product.price.toLocaleString()}/
+                    <span className="text-sm text-gray-600">{formatWeightUnit(product.weightUnit)}</span>
+                  </div>
+                  {product.originalPrice && (
+                    <div className="text-sm text-gray-500 line-through">
+                      ₹{product.originalPrice.toLocaleString()}
+                    </div>
+                  )}
+                  <div className="text-xs text-gray-500 mt-1">
+                    Min order: {product.minOrder}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="space-y-2">
+                  <button
+                    onClick={() => onViewDetails(product)}
+                    className="w-full border-2 border-orange-600 text-orange-600 py-2 px-4 rounded-lg font-semibold hover:bg-orange-50 transition-colors text-sm flex items-center justify-center"
+                  >
+                    <Eye className="h-4 w-4 mr-1" />
+                    View Details
+                  </button>
+                  <button
+                    onClick={() => onAddToCart(product)}
+                    disabled={!product.inStock}
+                    className="w-full bg-orange-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm flex items-center justify-center"
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-1" />
+                    Add to Cart
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group">
       {/* Product Image */}
@@ -101,7 +226,8 @@ const ProductCard: React.FC<ProductCardProps> = ({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
             <span className="text-2xl font-bold text-gray-900">
-              ₹{product.price.toLocaleString()}
+              ₹{product.price.toLocaleString()}/
+              <span className="text-sm text-gray-600">{formatWeightUnit(product.weightUnit)}</span>
             </span>
             {product.originalPrice && (
               <span className="text-sm text-gray-500 line-through">

@@ -9,10 +9,11 @@ import ProductModal from '../components/ProductModal';
 import SellerModal from '../components/SellerModal';
 import Footer from '../components/Footer';
 import { products } from '../data/mockData';
-import { Product, CartItem, FilterState } from '../types';
+import { Product, FilterState } from '../types';
+import { useCart } from '../contexts/CartContext';
 
 const Marketplace: React.FC = () => {
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const { cartItems, addToCart, updateQuantity, removeItem, getCartItemsCount } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -27,33 +28,16 @@ const Marketplace: React.FC = () => {
   });
 
   const handleAddToCart = (product: Product) => {
-    setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item.product.id === product.id);
-      if (existingItem) {
-        return prevItems.map(item =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      } else {
-        return [...prevItems, { product, quantity: product.minOrder }];
-      }
-    });
+    addToCart(product);
     setIsCartOpen(true);
   };
 
   const handleUpdateQuantity = (productId: string, quantity: number) => {
-    setCartItems(prevItems =>
-      prevItems.map(item =>
-        item.product.id === productId
-          ? { ...item, quantity: Math.max(1, quantity) }
-          : item
-      )
-    );
+    updateQuantity(productId, quantity);
   };
 
   const handleRemoveItem = (productId: string) => {
-    setCartItems(prevItems => prevItems.filter(item => item.product.id !== productId));
+    removeItem(productId);
   };
 
   const handleViewDetails = (product: Product) => {
@@ -72,7 +56,7 @@ const Marketplace: React.FC = () => {
     document.getElementById('featured')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const cartItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const cartItemsCount = getCartItemsCount();
 
   return (
     <div className="min-h-screen bg-gray-50">
