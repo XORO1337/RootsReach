@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Header from '../components/Header';
 import Hero from '../components/Hero';
 import Categories from '../components/Categories';
@@ -8,12 +9,16 @@ import Cart from '../components/Cart';
 import ProductModal from '../components/ProductModal';
 import SellerModal from '../components/SellerModal';
 import Footer from '../components/Footer';
+import LanguageSelectionModal from '../components/LanguageSelectionModal';
 import { products } from '../data/mockData';
 import { Product, FilterState } from '../types';
 import { useCart } from '../contexts/CartContext';
+import { useLanguageSelection } from '../hooks/useLanguageSelection';
 
 const Marketplace: React.FC = () => {
   const { cartItems, addToCart, updateQuantity, removeItem, getCartItemsCount } = useCart();
+  const { t } = useTranslation();
+  const { showLanguageModal, closeLanguageModal } = useLanguageSelection();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
@@ -67,7 +72,7 @@ const Marketplace: React.FC = () => {
           className="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition-colors shadow-lg flex items-center space-x-2"
         >
           <span>🎨</span>
-          <span>Artisan Dashboard</span>
+          <span>{t('navigation.artisanDashboard')}</span>
         </Link>
       </div>
       
@@ -118,6 +123,12 @@ const Marketplace: React.FC = () => {
           setIsSellerModalOpen(false);
           setSelectedSellerId(null);
         }}
+      />
+
+      {/* Language Selection Modal */}
+      <LanguageSelectionModal 
+        isOpen={showLanguageModal} 
+        onClose={closeLanguageModal} 
       />
     </div>
   );

@@ -9,12 +9,11 @@ import { Product, FilterState } from '../types';
 import { useWishlist, WishlistItem } from '../contexts/WishlistContext';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
-import { formatWeightUnit } from '../utils/formatters';
 
 const WishlistPage: React.FC = () => {
   const { wishlist, isLoading, removeFromWishlist, clearWishlist } = useWishlist();
   const { cartItems, addToCart, updateQuantity, removeItem, getCartItemsCount } = useCart();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isClearing, setIsClearing] = useState(false);
 
@@ -36,41 +35,28 @@ const WishlistPage: React.FC = () => {
 
   // Convert wishlist item to Product type for cart
   const convertWishlistItemToProduct = (item: WishlistItem): Product => {
-    const productImage = item.productId.images && item.productId.images.length > 0 
-      ? item.productId.images[0] 
-      : '/api/placeholder/300/300';
-
-    const artisan = item.productId.artisanId || {
-      _id: 'default-artisan',
-      name: 'RootsReach Artisan',
-      email: '',
-      phone: '',
-      city: 'India',
-      state: 'Various'
-    };
-
     return {
-      id: item.productId._id,
-      name: item.productId.name,
-      price: item.productId.price,
-      weightUnit: item.productId.weightUnit || 'g',
-      image: productImage,
-      category: item.productId.category,
-      description: item.productId.description,
+      id: item.productId,
+      name: item.productName,
+      price: item.productPrice,
+      weightUnit: 'g', // Default since not stored in local storage
+      image: item.productImage || '/api/placeholder/300/300',
+      category: item.productCategory || 'Product',
+      description: '', // Not stored in local storage for simplicity
       materials: [],
-      craftType: item.productId.category,
+      craftType: item.productCategory,
       rating: 4.5,
       reviews: 12,
-      inStock: item.productId.stock > 0,
+      inStock: true, // Assume in stock since we don't store stock info
       minOrder: 1,
       seller: {
-        id: artisan._id,
-        name: artisan.name,
-        city: artisan.city || 'Unknown',
-        state: artisan.state || 'Unknown',
+        id: 'local-artisan',
+        name: item.artisanName || 'RootsReach Artisan',
+        city: 'India',
+        state: 'Various',
         avatar: '/api/placeholder/60/60',
         story: '',
-        specialties: [item.productId.category],
+        specialties: [item.productCategory || 'Product'],
         rating: 4.5,
         totalProducts: 0,
         yearsOfExperience: 5
@@ -82,7 +68,7 @@ const WishlistPage: React.FC = () => {
     try {
       const product = convertWishlistItemToProduct(item);
       addToCart(product);
-      toast.success(`${item.productId.name} added to cart!`, {
+      toast.success(`${item.productName} added to cart!`, {
         icon: '🛒',
         duration: 2000
       });
@@ -203,22 +189,17 @@ const WishlistPage: React.FC = () => {
               .filter(item => item && item.productId) // Filter out any items with missing data
               .map((item) => (
               <div
-                key={item.productId._id}
+                key={item.productId}
                 className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden"
               >
                 <div className="flex flex-col md:flex-row">
                   {/* Product Image */}
                   <div className="relative w-full md:w-48 h-48 flex-shrink-0">
                     <img
-                      src={item.productId.images?.[0] || '/api/placeholder/300/300'}
-                      alt={item.productId.name || 'Product'}
+                      src={item.productImage || '/api/placeholder/300/300'}
+                      alt={item.productName || 'Product'}
                       className="w-full h-full object-cover"
                     />
-                    {(item.productId.stock || 0) === 0 && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <span className="text-white font-semibold text-sm">Out of Stock</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Product Info */}
@@ -227,32 +208,32 @@ const WishlistPage: React.FC = () => {
                       <div className="flex-1">
                         {/* Category */}
                         <span className="inline-block text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-full font-medium mb-2">
-                          {item.productId.category}
+                          {item.productCategory || 'Product'}
                         </span>
                         
                         {/* Product Name */}
                         <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                          {item.productId.name}
+                          {item.productName}
                         </h3>
 
-                        {/* Description */}
+                        {/* Description - Simplified for local storage */}
                         <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                          {item.productId.description}
+                          Handcrafted with care by local artisans
                         </p>
 
                         {/* Seller Info */}
                         <div className="flex items-center mb-3">
                           <img
                             src="/api/placeholder/40/40"
-                            alt={item.productId.artisanId?.name || 'Artisan'}
+                            alt={item.artisanName || 'Artisan'}
                             className="w-6 h-6 rounded-full mr-2"
                           />
                           <span className="text-sm text-gray-600">
-                            by {item.productId.artisanId?.name || 'RootsReach Artisan'}
+                            by {item.artisanName || 'RootsReach Artisan'}
                           </span>
                           <div className="flex items-center text-xs text-gray-500 ml-4">
                             <MapPin className="h-3 w-3 mr-1" />
-                            {item.productId.artisanId?.city || 'India'}
+                            India
                           </div>
                         </div>
 
@@ -283,11 +264,11 @@ const WishlistPage: React.FC = () => {
                       <div className="text-right ml-6">
                         <div className="mb-4">
                           <div className="text-2xl font-bold text-gray-900">
-                            ₹{(item.productId.price || 0).toLocaleString()}/
-                            <span className="text-sm text-gray-600">{formatWeightUnit(item.productId.weightUnit || 'unit')}</span>
+                            ₹{(item.productPrice || 0).toLocaleString()}/
+                            <span className="text-sm text-gray-600">unit</span>
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
-                            Stock: {item.productId.stock || 0} available
+                            In Stock
                           </div>
                         </div>
 
@@ -295,14 +276,13 @@ const WishlistPage: React.FC = () => {
                         <div className="space-y-2">
                           <button
                             onClick={() => handleAddToCart(item)}
-                            disabled={(item.productId.stock || 0) === 0}
-                            className="w-full bg-orange-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm flex items-center justify-center"
+                            className="w-full bg-orange-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-orange-700 transition-colors text-sm flex items-center justify-center"
                           >
                             <ShoppingCart className="h-4 w-4 mr-1" />
                             Add to Cart
                           </button>
                           <button
-                            onClick={() => handleRemoveFromWishlist(item.productId._id)}
+                            onClick={() => handleRemoveFromWishlist(item.productId)}
                             className="w-full border-2 border-red-300 text-red-600 py-2 px-4 rounded-lg font-semibold hover:bg-red-50 transition-colors text-sm flex items-center justify-center"
                           >
                             <Trash2 className="h-4 w-4 mr-1" />

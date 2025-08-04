@@ -16,16 +16,17 @@ const {
   validateManualVerification,
   validatePasswordChange,
   validateObjectId,
-  validatePhoneOnly
+  validatePhoneOnly,
+  validateEmailOnly
 } = require('../middleware/validation');
 
 // ========== AUTHENTICATION ROUTES ==========
 
 // Register with email or phone
-router.post('/register', authLimit, validateUserRegistration, AuthController.registerWithEmail);
+router.post('/register', authLimit, validateUserRegistration, AuthController.registerWithEmailOTP);
 
 // Login with phone/email and password
-router.post('/login', authLimit, validateUserLogin, AuthController.login);
+router.post('/login', authLimit, validateUserLogin, AuthController.loginWithEmailOTP);
 
 // Google OAuth routes
 router.get('/google', AuthController.initiateGoogleAuth);
@@ -43,8 +44,8 @@ router.get('/debug/user-role/:email', async (req, res) => {
 });
 
 // OTP routes
-router.post('/send-otp', otpLimit, validatePhoneOnly, AuthController.sendOTP);
-router.post('/resend-otp', otpLimit, validatePhoneOnly, AuthController.resendOTP);
+router.post('/send-otp', otpLimit, validateEmailOnly, AuthController.sendOTP);
+router.post('/resend-otp', otpLimit, validateEmailOnly, AuthController.resendOTP);
 router.get('/otp-status', generalLimit, AuthController.getOTPStatus);
 router.post('/verify-otp', authLimit, validateOTP, AuthController.verifyOTP);
 

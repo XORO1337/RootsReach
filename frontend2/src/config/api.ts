@@ -23,6 +23,10 @@ export const API_CONFIG = {
       GOOGLE_OAUTH: '/api/auth/google',
       PROFILE: '/api/auth/profile',
       LOGOUT: '/api/auth/logout',
+      SEND_OTP: '/api/auth/send-otp',
+      RESEND_OTP: '/api/auth/resend-otp',
+      VERIFY_OTP: '/api/auth/verify-otp',
+      OTP_STATUS: '/api/auth/otp-status',
     },
     PRODUCTS: {
       BASE: '/api/products',

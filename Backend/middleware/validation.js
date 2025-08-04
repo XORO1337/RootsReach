@@ -81,15 +81,20 @@ const validateUserLogin = [
 
 // OTP validation
 const validateOTP = [
-  body('phone')
-    .matches(/^[+]?[1-9]\d{1,14}$/)
-    .withMessage('Please provide a valid phone number')
-    .trim(),
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address'),
     
   body('otp')
-    .isLength({ min: 4, max: 6 })
+    .isLength({ min: 6, max: 6 })
     .isNumeric()
-    .withMessage('OTP must be a 4-6 digit number'),
+    .withMessage('OTP must be a 6 digit number'),
+    
+  body('action')
+    .optional()
+    .isIn(['login', 'signup'])
+    .withMessage('Action must be either login or signup'),
     
   handleValidationErrors
 ];
@@ -341,6 +346,15 @@ const validateOrderCreation = [
   handleValidationErrors
 ];
 
+// Email validation middleware
+const validateEmailOnly = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address'),
+  handleValidationErrors
+];
+
 module.exports = {
   validateUserRegistration,
   validateUserLogin,
@@ -356,5 +370,6 @@ module.exports = {
   validateObjectId,
   validateSearch,
   validateOrderCreation,
+  validateEmailOnly,
   handleValidationErrors
 };

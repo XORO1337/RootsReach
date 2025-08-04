@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Menu, X, Heart, User, LogOut } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { FilterState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import { useWishlist } from '../contexts/WishlistContext';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface HeaderProps {
   cartItemsCount: number;
@@ -18,6 +20,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
   const [searchQuery, setSearchQuery] = useState(filters.search || '');
   const { user, logout } = useAuth();
   const { getWishlistItemsCount } = useWishlist();
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const wishlistItemsCount = getWishlistItemsCount();
@@ -99,7 +102,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
               </div>
               <input
                 type="text"
-                placeholder="Search for handmade crafts, artisans, or cities..."
+                placeholder={t('marketplace.searchPlaceholder')}
                 className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all duration-200 text-gray-700 placeholder-gray-400"
                 value={searchQuery}
                 onChange={handleSearchChange}
@@ -109,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                 onClick={handleSearchButtonClick}
                 className="absolute inset-y-0 right-0 px-6 bg-gradient-to-r from-orange-600 to-orange-500 text-white rounded-r-xl hover:from-orange-700 hover:to-orange-600 transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
               >
-                Search
+                {t('common.search')}
               </button>
             </form>
           </div>
@@ -123,13 +126,18 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                 className="relative flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200"
               >
                 <Heart className="h-5 w-5" />
-                <span className="text-sm font-medium">Wishlist</span>
+                <span className="text-sm font-medium">{t('navigation.wishlist')}</span>
                 {wishlistItemsCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                     {wishlistItemsCount > 99 ? '99+' : wishlistItemsCount}
                   </span>
                 )}
               </Link>
+
+              {/* Language Switcher */}
+              <div className="px-2">
+                <LanguageSwitcher variant="dropdown" className="text-sm" />
+              </div>
               
               <div className="relative">
                 <button 
@@ -138,7 +146,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                 >
                   <User className="h-5 w-5" />
                   <span className="text-sm font-medium">
-                    {user ? user.name : 'Account'}
+                    {user ? user.name : t('navigation.profile')}
                   </span>
                 </button>
                 
@@ -158,7 +166,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                             className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                             onClick={() => setShowUserMenu(false)}
                           >
-                            Artisan Dashboard
+                            {t('navigation.artisanDashboard')}
                           </Link>
                         )}
                         {user.role === 'customer' && (
@@ -178,7 +186,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                           className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center"
                         >
                           <LogOut className="h-4 w-4 mr-2" />
-                          Sign Out
+                          {t('navigation.logout')}
                         </button>
                       </>
                     ) : (
@@ -188,14 +196,14 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                           onClick={() => setShowUserMenu(false)}
                         >
-                          Sign In
+                          {t('navigation.login')}
                         </Link>
                         <Link
                           to="/signup"
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
                           onClick={() => setShowUserMenu(false)}
                         >
-                          Create Account
+                          {t('navigation.register')}
                         </Link>
                       </>
                     )}
@@ -239,7 +247,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
           </div>
           <input
             type="text"
-            placeholder="Search crafts, artisans..."
+            placeholder={t('marketplace.searchPlaceholder')}
             className="w-full pl-12 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100 transition-all duration-200"
             value={searchQuery}
             onChange={handleSearchChange}
@@ -260,7 +268,7 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                 onClick={() => setIsMenuOpen(false)}
               >
                 <Heart className="h-5 w-5 text-gray-600" />
-                <span className="font-medium text-gray-700">Wishlist</span>
+                <span className="font-medium text-gray-700">{t('navigation.wishlist')}</span>
                 {wishlistItemsCount > 0 && (
                   <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                     {wishlistItemsCount > 99 ? '99+' : wishlistItemsCount}
@@ -273,9 +281,14 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                   className="flex items-center justify-center space-x-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors w-full"
                 >
                   <User className="h-5 w-5 text-gray-600" />
-                  <span className="font-medium text-gray-700">Account</span>
+                  <span className="font-medium text-gray-700">{t('navigation.profile')}</span>
                 </button>
               </div>
+            </div>
+
+            {/* Language Switcher for Mobile */}
+            <div className="flex justify-center py-2">
+              <LanguageSwitcher variant="buttons" className="scale-90" />
             </div>
             {/* Mobile Auth Links */}
             <div className="grid grid-cols-2 gap-4 pt-4">
@@ -284,14 +297,14 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
                 className="flex items-center justify-center py-3 px-4 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Sign In
+                {t('navigation.login')}
               </Link>
               <Link
                 to="/signup"
                 className="flex items-center justify-center py-3 px-4 border border-orange-500 text-orange-500 rounded-lg hover:bg-orange-50 transition-colors font-medium"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Sign Up
+                {t('navigation.register')}
               </Link>
             </div>
             <div className="border-t border-gray-200 pt-4 space-y-3">

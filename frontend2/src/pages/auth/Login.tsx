@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Palette, Package } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { buildApiUrl, buildGoogleOAuthUrl, API_CONFIG } from '../../config/api';
+import OTPVerification from '../../components/OTPVerification';
+import LanguageSelectionModal from '../../components/LanguageSelectionModal';
+import { useLanguageSelection } from '../../hooks/useLanguageSelection';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useTranslation();
+  const { showLanguageModal, closeLanguageModal } = useLanguageSelection();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -16,22 +22,24 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [showOTPVerification, setShowOTPVerification] = useState(false);
+  const [pendingUserData, setPendingUserData] = useState<any>(null);
 
   const validateForm = () => {
     const errors: {[key: string]: string} = {};
 
     // Email validation
     if (!formData.email) {
-      errors.email = 'Email address is required';
+      errors.email = t('validation.emailRequired');
     } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
-      errors.email = 'Please enter a valid email address';
+      errors.email = t('validation.emailInvalid');
     }
 
     // Password validation
     if (!formData.password) {
-      errors.password = 'Password is required';
+      errors.password = t('validation.passwordRequired');
     } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters long';
+      errors.password = t('validation.passwordMinLength');
     }
 
     setValidationErrors(errors);
@@ -41,25 +49,25 @@ const Login: React.FC = () => {
   const parseBackendError = (errorMessage: string) => {
     // Parse specific backend error messages
     if (errorMessage.includes('Invalid credentials') || errorMessage.includes('Invalid email or password')) {
-      return 'The email or password you entered is incorrect. Please check and try again.';
+      return t('errors.invalidCredentials');
     }
     if (errorMessage.includes('User not found') || errorMessage.includes('No user found with this email')) {
-      return 'No account found with this email address. Please check your email or sign up for a new account.';
+      return t('errors.userNotFound');
     }
     if (errorMessage.includes('Account is locked') || errorMessage.includes('temporarily locked')) {
-      return 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later or contact support.';
+      return t('errors.accountLocked');
     }
     if (errorMessage.includes('Email not verified')) {
-      return 'Please verify your email address before logging in. Check your inbox for a verification email.';
+      return t('errors.emailNotVerified');
     }
     if (errorMessage.includes('Account suspended') || errorMessage.includes('Account disabled')) {
-      return 'Your account has been suspended. Please contact support for assistance.';
+      return t('errors.accountSuspended');
     }
     if (errorMessage.includes('Network Error') || errorMessage.includes('Failed to fetch')) {
-      return 'Network connection error. Please check your internet connection and try again.';
+      return t('errors.networkError');
     }
     if (errorMessage.includes('Server Error') || errorMessage.includes('Internal Server Error')) {
-      return 'Server error occurred. Please try again in a few minutes.';
+      return t('errors.serverError');
     }
     
     return errorMessage; // Return original message if no specific handling
@@ -79,6 +87,59 @@ const Login: React.FC = () => {
         [name]: ''
       }));
     }
+  };
+
+  const handleLoginSuccess = (userData: any) => {
+    console.log('🔍 Login Debug - User role from backend:', userData.role || userData.user?.role);
+    
+    // Show role change notification if applicable
+    if (userData.roleChanged) {
+      console.log('🔄 Role changed during login to:', userData.user?.role || userData.role);
+    }
+    
+    // Use the auth context to manage user state
+    const user = userData.user || userData;
+    const userDataForAuth = {
+      id: user.id || user.userId,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+      isPhoneVerified: user.isPhoneVerified,
+      isIdentityVerified: user.isIdentityVerified
+    };
+    
+    console.log('🔍 Login Debug - UserData object created:', userDataForAuth);
+    console.log('🔍 Login Debug - About to redirect based on role:', userDataForAuth.role);
+    
+    login(userDataForAuth, userData.accessToken);
+    
+    // Redirect based on role
+    switch (userDataForAuth.role) {
+      case 'artisan':
+        console.log('🔍 Login Debug - Redirecting to /artisan');
+        navigate('/artisan');
+        break;
+      case 'distributor':
+        console.log('🔍 Login Debug - Redirecting to /distributor');
+        navigate('/distributor');
+        break;
+      default:
+        console.log('🔍 Login Debug - Redirecting to / (customer or default)');
+        navigate('/');
+    }
+  };
+
+  const handleOTPVerified = (userData: any) => {
+    setShowOTPVerification(false);
+    setPendingUserData(null);
+    handleLoginSuccess(userData);
+  };
+
+  const handleOTPCancel = () => {
+    setShowOTPVerification(false);
+    setPendingUserData(null);
+    setError('Login cancelled. Please try again.');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,42 +175,14 @@ const Login: React.FC = () => {
       console.log('🔍 Login Debug - Backend response:', data);
 
       if (data.success) {
-        console.log('🔍 Login Debug - User role from backend:', data.data.user.role);
-        
-        // Show role change notification if applicable
-        if (data.data.roleChanged) {
-          console.log('🔄 Role changed during login to:', data.data.user.role);
-        }
-        
-        // Use the auth context to manage user state
-        const userData = {
-          id: data.data.user.id,
-          name: data.data.user.name,
-          email: data.data.user.email,
-          role: data.data.user.role,
-          isEmailVerified: data.data.user.isEmailVerified,
-          isPhoneVerified: data.data.user.isPhoneVerified,
-          isIdentityVerified: data.data.user.isIdentityVerified
-        };
-        
-        console.log('🔍 Login Debug - UserData object created:', userData);
-        console.log('🔍 Login Debug - About to redirect based on role:', userData.role);
-        
-        login(userData, data.data.accessToken);
-        
-        // Redirect based on role
-        switch (userData.role) {
-          case 'artisan':
-            console.log('🔍 Login Debug - Redirecting to /artisan');
-            navigate('/artisan');
-            break;
-          case 'distributor':
-            console.log('🔍 Login Debug - Redirecting to /distributor');
-            navigate('/distributor');
-            break;
-          default:
-            console.log('🔍 Login Debug - Redirecting to / (customer or default)');
-            navigate('/');
+        // Check if OTP is required
+        if (data.data.requiresOTP) {
+          // Store user data and show OTP verification
+          setPendingUserData(data.data);
+          setShowOTPVerification(true);
+        } else {
+          // Handle old flow if no OTP required (shouldn't happen with new backend)
+          handleLoginSuccess(data.data);
         }
       } else {
         const errorMessage = parseBackendError(data.message || 'Login failed. Please check your credentials.');
@@ -204,8 +237,8 @@ const Login: React.FC = () => {
 
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Welcome Back</h1>
-          <p className="text-gray-600">Sign in to your account to continue</p>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">{t('auth.welcomeBack')}</h1>
+          <p className="text-gray-600">{t('auth.signInToContinue')}</p>
         </div>
 
         {/* Error Display */}
@@ -220,7 +253,7 @@ const Login: React.FC = () => {
           {/* Email Field */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address
+              {t('auth.emailAddress')}
             </label>
             <input
               type="email"
@@ -228,7 +261,7 @@ const Login: React.FC = () => {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              placeholder="Enter your email address"
+              placeholder={t('auth.enterEmail')}
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${
                 validationErrors.email 
                   ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
@@ -244,7 +277,7 @@ const Login: React.FC = () => {
           {/* Password Field */}
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              Password
+              {t('auth.password')}
             </label>
             <div className="relative">
               <input
@@ -253,7 +286,7 @@ const Login: React.FC = () => {
                 name="password"
                 value={formData.password}
                 onChange={handleInputChange}
-                placeholder="Enter your password"
+                placeholder={t('auth.enterPassword')}
                 className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${
                   validationErrors.password 
                     ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
@@ -277,10 +310,10 @@ const Login: React.FC = () => {
           {/* Role Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              I want to login as:
+              {t('auth.loginAs')}
             </label>
             <p className="text-xs text-gray-500 mb-3">
-              Note: You can change your role during login. If you select a different role than your original signup, your account will be updated accordingly.
+              {t('auth.roleChangeNote')}
             </p>
             <div className="grid grid-cols-1 gap-3">
               {/* Customer Role */}
@@ -296,8 +329,8 @@ const Login: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <User className={`h-5 w-5 ${formData.role === 'customer' ? 'text-orange-500' : 'text-gray-400'}`} />
                   <div>
-                    <div className="font-medium text-gray-900">Customer</div>
-                    <div className="text-sm text-gray-500">Login to browse and purchase handmade crafts</div>
+                    <div className="font-medium text-gray-900">{t('auth.customer')}</div>
+                    <div className="text-sm text-gray-500">{t('auth.customerDesc')}</div>
                   </div>
                 </div>
               </button>
@@ -315,8 +348,8 @@ const Login: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <Palette className={`h-5 w-5 ${formData.role === 'artisan' ? 'text-orange-500' : 'text-gray-400'}`} />
                   <div>
-                    <div className="font-medium text-gray-900">Artisan</div>
-                    <div className="text-sm text-gray-500">Login to manage your crafts and orders</div>
+                    <div className="font-medium text-gray-900">{t('auth.artisan')}</div>
+                    <div className="text-sm text-gray-500">{t('auth.artisanDesc')}</div>
                   </div>
                 </div>
               </button>
@@ -334,8 +367,8 @@ const Login: React.FC = () => {
                 <div className="flex items-center space-x-3">
                   <Package className={`h-5 w-5 ${formData.role === 'distributor' ? 'text-orange-500' : 'text-gray-400'}`} />
                   <div>
-                    <div className="font-medium text-gray-900">Distributor</div>
-                    <div className="text-sm text-gray-500">Login to manage inventory and distribution</div>
+                    <div className="font-medium text-gray-900">{t('auth.distributor')}</div>
+                    <div className="text-sm text-gray-500">{t('auth.distributorDesc')}</div>
                   </div>
                 </div>
               </button>
@@ -348,7 +381,7 @@ const Login: React.FC = () => {
             disabled={isLoading}
             className="w-full bg-gradient-to-r from-orange-500 to-orange-600 text-white py-3 px-4 rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Signing In...' : 'Sign In'}
+            {isLoading ? t('common.loading') : t('auth.login')}
           </button>
 
           {/* Divider */}
@@ -370,20 +403,36 @@ const Login: React.FC = () => {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Continue with Google
+            {t('auth.signInWithGoogle')}
           </button>
         </form>
 
         {/* Footer */}
         <div className="text-center mt-6">
           <p className="text-sm text-gray-600">
-            Don't have an account?{' '}
+            {t('auth.dontHaveAccount')}{' '}
             <Link to="/signup" className="text-orange-600 hover:text-orange-700 font-medium transition-colors">
-              Sign up
+              {t('auth.signup')}
             </Link>
           </p>
         </div>
       </div>
+
+      {/* OTP Verification Modal */}
+      {showOTPVerification && (
+        <OTPVerification
+          email={formData.email}
+          action="login"
+          onVerified={handleOTPVerified}
+          onCancel={handleOTPCancel}
+        />
+      )}
+
+      {/* Language Selection Modal */}
+      <LanguageSelectionModal 
+        isOpen={showLanguageModal} 
+        onClose={closeLanguageModal} 
+      />
     </div>
   );
 };

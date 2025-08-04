@@ -1,28 +1,15 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuth } from './AuthContext';
-import { api } from '../utils/api';
 
+// Simplified interface for local storage
 export interface WishlistItem {
-  productId: {
-    _id: string;
-    name: string;
-    description: string;
-    category: string;
-    price: number;
-    weightUnit?: string;
-    stock: number;
-    images: string[];
-    status: string;
-    artisanId?: {
-      _id: string;
-      name: string;
-      email: string;
-      phone: string;
-      city?: string;
-      state?: string;
-    } | null;
-  };
+  productId: string;
+  productName: string;
+  productPrice: number;
+  productImage: string;
+  productCategory: string;
+  artisanName?: string;
   addedAt: string;
 }
 
@@ -30,20 +17,32 @@ export interface WishlistData {
   userId: string;
   items: WishlistItem[];
   totalItems: number;
-  createdAt?: string;
-  updatedAt?: string;
+  lastUpdated: string;
 }
 
 interface WishlistContextType {
   wishlist: WishlistData | null;
   isLoading: boolean;
   error: string | null;
-  addToWishlist: (productId: string) => Promise<void>;
+  addToWishlist: (product: {
+    id: string;
+    name: string;
+    price: number;
+    image: string;
+    category: string;
+    artisanName?: string;
+  }) => Promise<void>;
   removeFromWishlist: (productId: string) => Promise<void>;
-  toggleWishlistItem: (productId: string) => Promise<boolean>;
+  toggleWishlistItem: (product: {
+    id: string;
+    name: string;
+    price: number;
+    image: string;
+    category: string;
+    artisanName?: string;
+  }) => Promise<boolean>;
   isInWishlist: (productId: string) => boolean;
   clearWishlist: () => Promise<void>;
-  fetchWishlist: () => Promise<void>;
   getWishlistItemsCount: () => number;
 }
 
@@ -53,16 +52,52 @@ interface WishlistProviderProps {
   children: React.ReactNode;
 }
 
+// Local storage utilities
+const getWishlistKey = (userId: string) => `wishlist_${userId}`;
+
+const loadWishlistFromStorage = (userId: string): WishlistData | null => {
+  try {
+    const stored = localStorage.getItem(getWishlistKey(userId));
+    if (!stored) return null;
+    
+    const parsed = JSON.parse(stored);
+    // Validate the structure
+    if (parsed && parsed.userId === userId && Array.isArray(parsed.items)) {
+      return parsed;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error loading wishlist from storage:', error);
+    return null;
+  }
+};
+
+const saveWishlistToStorage = (wishlistData: WishlistData) => {
+  try {
+    localStorage.setItem(getWishlistKey(wishlistData.userId), JSON.stringify(wishlistData));
+  } catch (error) {
+    console.error('Error saving wishlist to storage:', error);
+    toast.error('Failed to save wishlist');
+  }
+};
+
+const createEmptyWishlist = (userId: string): WishlistData => ({
+  userId,
+  items: [],
+  totalItems: 0,
+  lastUpdated: new Date().toISOString()
+});
+
 export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) => {
   const [wishlist, setWishlist] = useState<WishlistData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user, isAuthenticated } = useAuth();
 
-  // Fetch wishlist when user logs in
+  // Load wishlist when user logs in
   useEffect(() => {
     if (isAuthenticated && user?.id) {
-      fetchWishlist();
+      loadUserWishlist();
     } else {
       // Clear wishlist when user logs out
       setWishlist(null);
@@ -70,116 +105,136 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
     }
   }, [isAuthenticated, user?.id]);
 
-  const fetchWishlist = async () => {
-    if (!isAuthenticated || !user?.id) {
-      return;
-    }
-
+  const loadUserWishlist = () => {
+    if (!user?.id) return;
+    
     setIsLoading(true);
-    setError(null);
-
     try {
-      const response = await api.get('/api/wishlist');
-      
-      if (response.data.success) {
-        setWishlist(response.data.data);
-      } else {
-        throw new Error(response.data.message || 'Failed to fetch wishlist');
-      }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to fetch wishlist';
-      setError(errorMessage);
-      console.error('Error fetching wishlist:', err);
+      const userWishlist = loadWishlistFromStorage(user.id) || createEmptyWishlist(user.id);
+      setWishlist(userWishlist);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading wishlist:', err);
+      setError('Failed to load wishlist');
+      setWishlist(createEmptyWishlist(user.id));
     } finally {
       setIsLoading(false);
     }
   };
 
-  const addToWishlist = async (productId: string) => {
+  const updateWishlist = (updatedWishlist: WishlistData) => {
+    updatedWishlist.lastUpdated = new Date().toISOString();
+    updatedWishlist.totalItems = updatedWishlist.items.length;
+    setWishlist(updatedWishlist);
+    saveWishlistToStorage(updatedWishlist);
+  };
+
+  const addToWishlist = async (product: {
+    id: string;
+    name: string;
+    price: number;
+    image: string;
+    category: string;
+    artisanName?: string;
+  }) => {
     if (!isAuthenticated || !user?.id) {
       toast.error('Please log in to add items to your wishlist');
       return;
     }
 
-    try {
-      const response = await api.post('/api/wishlist/add', { productId });
-      
-      if (response.data.success) {
-        setWishlist(response.data.data);
-        toast.success('Added to wishlist!', {
-          icon: '❤️',
-          duration: 2000
-        });
-      } else {
-        throw new Error(response.data.message || 'Failed to add to wishlist');
-      }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to add to wishlist';
-      if (errorMessage.includes('already in wishlist')) {
-        toast.error('Product is already in your wishlist');
-      } else {
-        toast.error(errorMessage);
-      }
-      throw new Error(errorMessage);
-    }
-  };
-
-  const removeFromWishlist = async (productId: string) => {
-    if (!isAuthenticated || !user?.id) {
+    if (!wishlist) {
+      setError('Wishlist not loaded');
       return;
     }
 
     try {
-      const response = await api.delete(`/api/wishlist/remove/${productId}`);
-      
-      if (response.data.success) {
-        setWishlist(response.data.data);
-        toast.success('Removed from wishlist', {
-          icon: '💔',
-          duration: 2000
-        });
-      } else {
-        throw new Error(response.data.message || 'Failed to remove from wishlist');
+      // Check if item already exists
+      if (wishlist.items.some(item => item.productId === product.id)) {
+        toast.error('Product is already in your wishlist');
+        return;
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to remove from wishlist';
-      toast.error(errorMessage);
-      throw new Error(errorMessage);
+
+      const newItem: WishlistItem = {
+        productId: product.id,
+        productName: product.name,
+        productPrice: product.price,
+        productImage: product.image,
+        productCategory: product.category,
+        artisanName: product.artisanName,
+        addedAt: new Date().toISOString()
+      };
+
+      const updatedWishlist = {
+        ...wishlist,
+        items: [...wishlist.items, newItem]
+      };
+
+      updateWishlist(updatedWishlist);
+      
+      toast.success('Added to wishlist!', {
+        icon: '❤️',
+        duration: 2000
+      });
+    } catch (err) {
+      console.error('Error adding to wishlist:', err);
+      toast.error('Failed to add to wishlist');
     }
   };
 
-  const toggleWishlistItem = async (productId: string): Promise<boolean> => {
+  const removeFromWishlist = async (productId: string) => {
+    if (!isAuthenticated || !user?.id || !wishlist) {
+      return;
+    }
+
+    try {
+      const updatedWishlist = {
+        ...wishlist,
+        items: wishlist.items.filter(item => item.productId !== productId)
+      };
+
+      updateWishlist(updatedWishlist);
+      
+      toast.success('Removed from wishlist', {
+        icon: '💔',
+        duration: 2000
+      });
+    } catch (err) {
+      console.error('Error removing from wishlist:', err);
+      toast.error('Failed to remove from wishlist');
+    }
+  };
+
+  const toggleWishlistItem = async (product: {
+    id: string;
+    name: string;
+    price: number;
+    image: string;
+    category: string;
+    artisanName?: string;
+  }): Promise<boolean> => {
     if (!isAuthenticated || !user?.id) {
       toast.error('Please log in to manage your wishlist');
       return false;
     }
 
+    if (!wishlist) {
+      setError('Wishlist not loaded');
+      return false;
+    }
+
     try {
-      const response = await api.post('/api/wishlist/toggle', { productId });
+      const isCurrentlyInWishlist = wishlist.items.some(item => item.productId === product.id);
       
-      if (response.data.success) {
-        setWishlist(response.data.data);
-        const wasAdded = response.data.data.action === 'added';
-        
-        if (wasAdded) {
-          toast.success('Added to wishlist!', {
-            icon: '❤️',
-            duration: 2000
-          });
-        } else {
-          toast.success('Removed from wishlist', {
-            icon: '💔',
-            duration: 2000
-          });
-        }
-        
-        return wasAdded;
+      if (isCurrentlyInWishlist) {
+        await removeFromWishlist(product.id);
+        return false;
       } else {
-        throw new Error(response.data.message || 'Failed to update wishlist');
+        await addToWishlist(product);
+        return true;
       }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to update wishlist';
-      toast.error(errorMessage);
+    } catch (err) {
+      console.error('Error toggling wishlist item:', err);
+      toast.error('Failed to update wishlist');
       return false;
     }
   };
@@ -188,27 +243,21 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
     if (!wishlist || !wishlist.items) {
       return false;
     }
-    return wishlist.items.some(item => item.productId._id === productId);
+    return wishlist.items.some(item => item.productId === productId);
   };
 
   const clearWishlist = async () => {
-    if (!isAuthenticated || !user?.id) {
+    if (!isAuthenticated || !user?.id || !wishlist) {
       return;
     }
 
     try {
-      const response = await api.delete('/api/wishlist/clear');
-      
-      if (response.data.success) {
-        setWishlist(response.data.data);
-        toast.success('Wishlist cleared');
-      } else {
-        throw new Error(response.data.message || 'Failed to clear wishlist');
-      }
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Failed to clear wishlist';
-      toast.error(errorMessage);
-      throw new Error(errorMessage);
+      const emptyWishlist = createEmptyWishlist(user.id);
+      updateWishlist(emptyWishlist);
+      toast.success('Wishlist cleared');
+    } catch (err) {
+      console.error('Error clearing wishlist:', err);
+      toast.error('Failed to clear wishlist');
     }
   };
 
@@ -225,7 +274,6 @@ export const WishlistProvider: React.FC<WishlistProviderProps> = ({ children }) 
     toggleWishlistItem,
     isInWishlist,
     clearWishlist,
-    fetchWishlist,
     getWishlistItemsCount
   };
 

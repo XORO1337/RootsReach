@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Product } from '../types';
 import { Star, MapPin, ShoppingCart, Eye, Heart } from 'lucide-react';
 import { formatWeightUnit } from '../utils/formatters';
@@ -19,13 +20,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onViewSeller,
   viewMode = 'grid'
 }) => {
+  const { t } = useTranslation();
   const { isInWishlist, toggleWishlistItem } = useWishlist();
   const isWishlisted = isInWishlist(product.id);
 
   const handleWishlistToggle = async (e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent triggering other click events
     try {
-      await toggleWishlistItem(product.id);
+      await toggleWishlistItem({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        category: product.category,
+        artisanName: product.seller?.name
+      });
     } catch (error) {
       console.error('Error toggling wishlist:', error);
     }
@@ -43,7 +52,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             />
             {product.originalPrice && (
               <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-xs font-semibold">
-                {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
+                {Math.round((1 - product.price / product.originalPrice) * 100)}{t('productCard.percentOff')}
               </div>
             )}
             {/* Wishlist Heart Icon */}
@@ -61,7 +70,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             </button>
             {!product.inStock && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                <span className="text-white font-semibold text-sm">Out of Stock</span>
+                <span className="text-white font-semibold text-sm">{t('productCard.outOfStock')}</span>
               </div>
             )}
           </div>
@@ -95,7 +104,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     alt={product.seller.name}
                     className="w-6 h-6 rounded-full mr-2"
                   />
-                  <span className="text-sm text-gray-600">by {product.seller.name}</span>
+                  <span className="text-sm text-gray-600">{t('productCard.by')} {product.seller.name}</span>
                   <div className="flex items-center text-xs text-gray-500 ml-4">
                     <MapPin className="h-3 w-3 mr-1" />
                     {product.seller.city}
@@ -117,7 +126,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     ))}
                   </div>
                   <span className="text-sm text-gray-600 ml-2">
-                    {product.rating} ({product.reviews} reviews)
+                    {product.rating} ({product.reviews} {t('productCard.reviews')})
                   </span>
                 </div>
               </div>
@@ -135,7 +144,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     </div>
                   )}
                   <div className="text-xs text-gray-500 mt-1">
-                    Min order: {product.minOrder}
+                    {t('productCard.minOrder')} {product.minOrder}
                   </div>
                 </div>
 
@@ -146,7 +155,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     className="w-full border-2 border-orange-600 text-orange-600 py-2 px-4 rounded-lg font-semibold hover:bg-orange-50 transition-colors text-sm flex items-center justify-center"
                   >
                     <Eye className="h-4 w-4 mr-1" />
-                    View Details
+                    {t('productCard.viewDetails')}
                   </button>
                   <button
                     onClick={() => onAddToCart(product)}
@@ -154,7 +163,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     className="w-full bg-orange-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm flex items-center justify-center"
                   >
                     <ShoppingCart className="h-4 w-4 mr-1" />
-                    Add to Cart
+                    {t('productCard.addToCart')}
                   </button>
                 </div>
               </div>
@@ -176,7 +185,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         />
         {product.originalPrice && (
           <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-            {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
+            {Math.round((1 - product.price / product.originalPrice) * 100)}{t('productCard.percentOff')}
           </div>
         )}
         <div className="absolute top-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -203,7 +212,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
         {!product.inStock && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span className="text-white font-semibold">Out of Stock</span>
+            <span className="text-white font-semibold">{t('productCard.outOfStock')}</span>
           </div>
         )}
       </div>
@@ -239,7 +248,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             alt={product.seller.name}
             className="w-6 h-6 rounded-full mr-2"
           />
-          <span className="text-sm text-gray-600">by {product.seller.name}</span>
+          <span className="text-sm text-gray-600">{t('productCard.by')} {product.seller.name}</span>
         </div>
 
         {/* Rating */}
@@ -257,7 +266,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             ))}
           </div>
           <span className="text-sm text-gray-600 ml-2">
-            {product.rating} ({product.reviews} reviews)
+            {product.rating} ({product.reviews} {t('productCard.reviews')})
           </span>
         </div>
 
@@ -275,7 +284,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             )}
           </div>
           <span className="text-xs text-gray-500">
-            Min order: {product.minOrder}
+            {t('productCard.minOrder')} {product.minOrder}
           </span>
         </div>
 
@@ -285,7 +294,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             onClick={() => onViewDetails(product)}
             className="flex-1 border-2 border-orange-600 text-orange-600 py-2 px-4 rounded-lg font-semibold hover:bg-orange-50 transition-colors text-sm"
           >
-            View Details
+            {t('productCard.viewDetails')}
           </button>
           <button
             onClick={() => onAddToCart(product)}
@@ -293,7 +302,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
             className="flex-1 bg-orange-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors text-sm flex items-center justify-center"
           >
             <ShoppingCart className="h-4 w-4 mr-1" />
-            Add to Cart
+            {t('productCard.addToCart')}
           </button>
         </div>
       </div>

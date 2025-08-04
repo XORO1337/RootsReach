@@ -1,8 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Palette, Package } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { buildApiUrl, buildGoogleOAuthUrl, API_CONFIG } from '../../config/api';
+import OTPVerification from '../../components/OTPVerification';
+import LanguageSelectionModal from '../../components/LanguageSelectionModal';
+import { useLanguageSelection } from '../../hooks/useLanguageSelection';
 
 interface SignupFormData {
   fullName: string;
@@ -23,6 +27,8 @@ interface SignupFormData {
 const Signup: React.FC = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useTranslation();
+  const { showLanguageModal, closeLanguageModal } = useLanguageSelection();
   const [formData, setFormData] = useState<SignupFormData>({
     fullName: '',
     email: '',
@@ -36,6 +42,8 @@ const Signup: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+  const [showOTPVerification, setShowOTPVerification] = useState(false);
+  const [pendingUserData, setPendingUserData] = useState<any>(null);
 
   const validateForm = () => {
     const errors: {[key: string]: string} = {};
@@ -162,6 +170,45 @@ const Signup: React.FC = () => {
     setError('');
   };
 
+  const handleSignupSuccess = (userData: any) => {
+    console.log('🔍 Signup Debug - User data from backend:', userData);
+    
+    // Use the auth context to manage user state
+    const userDataForAuth = {
+      id: userData.userId || userData.id,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      isEmailVerified: userData.isEmailVerified,
+      isPhoneVerified: userData.isPhoneVerified || false,
+      isIdentityVerified: userData.isIdentityVerified || false,
+    };
+
+    login(userDataForAuth, userData.accessToken);
+
+    // Redirect based on role
+    const role = userData.role;
+    if (role === 'artisan') {
+      navigate('/artisan');
+    } else if (role === 'distributor') {
+      navigate('/distributor');
+    } else {
+      navigate('/');
+    }
+  };
+
+  const handleOTPVerified = (userData: any) => {
+    setShowOTPVerification(false);
+    setPendingUserData(null);
+    handleSignupSuccess(userData);
+  };
+
+  const handleOTPCancel = () => {
+    setShowOTPVerification(false);
+    setPendingUserData(null);
+    setError('Registration cancelled. Your account was created but not verified. Please log in to verify your email.');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -210,27 +257,14 @@ const Signup: React.FC = () => {
       const data = await response.json();
 
       if (data.success) {
-        // Use the auth context to manage user state
-        const userData = {
-          id: data.data.userId,
-          name: data.data.name,
-          email: data.data.email,
-          role: data.data.role,
-          isEmailVerified: data.data.isEmailVerified,
-          isPhoneVerified: data.data.isPhoneVerified,
-          isIdentityVerified: false, // Default for new users
-        };
-
-        login(userData, data.data.accessToken);
-
-        // Redirect based on role
-        const role = data.data.role ;
-        if (role === 'artisan') {
-          navigate('/artisan');
-        } else if (role === 'distributor') {
-          navigate('/distributor');
+        // Check if OTP was sent successfully
+        if (data.data.otpSent) {
+          // Store user data and show OTP verification
+          setPendingUserData(data.data);
+          setShowOTPVerification(true);
         } else {
-          navigate('/');
+          // Handle case where OTP sending failed but user was created
+          setError('Registration successful but OTP sending failed. Please contact support.');
         }
       } else {
         const errorMessage = parseBackendError(data.message || 'Registration failed. Please try again.');
@@ -659,6 +693,16 @@ const Signup: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* OTP Verification Modal */}
+      {showOTPVerification && (
+        <OTPVerification
+          email={formData.email}
+          action="signup"
+          onVerified={handleOTPVerified}
+          onCancel={handleOTPCancel}
+        />
+      )}
     </div>
   );
 };

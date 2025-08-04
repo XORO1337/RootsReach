@@ -11,6 +11,7 @@ const userRoutes = require('./routes/User_route');
 const artisanRoutes = require('./routes/Artisan_route');
 const artisanDashboardRoutes = require('./routes/ArtisanDashboard_route');
 const distributorRoutes = require('./routes/Distributor_route');
+const distributorDashboardRoutes = require('./routes/DistributorDashboard_route');
 const productRoutes = require('./routes/Products_route');
 const orderRoutes = require('./routes/Order_route');
 const rawMaterialRoutes = require('./routes/RawMaterial_route');
@@ -135,6 +136,9 @@ app.use('/api/inventory', inventoryRoutes);
 
 console.log('Defining distributor routes...');
 app.use('/api/distributors', distributorRoutes);
+
+console.log('Defining distributor dashboard routes...');
+app.use('/api/distributor-dashboard', distributorDashboardRoutes);
 
 console.log('Defining backup routes...');
 app.use('/api/backups', backupRoutes);
