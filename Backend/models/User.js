@@ -26,7 +26,16 @@ const addressSchema = new Schema({
   pinCode: {
     type: String,
     required: true,
-    match: [/^\d{6}$/, 'Please enter a valid 6-digit pin code']
+    trim: true,
+    validate: {
+      validator: function(value) {
+        // Ensure exactly 6 digits, no more, no less
+        return /^\d{6}$/.test(value) && value.length === 6;
+      },
+      message: 'Pin code must be exactly 6 digits'
+    },
+    minlength: [6, 'Pin code must be exactly 6 digits'],
+    maxlength: [6, 'Pin code must be exactly 6 digits']
   },
   isDefault: {
     type: Boolean,

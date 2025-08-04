@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import Marketplace from '../pages/Marketplace';
 import SearchResults from '../pages/SearchResults';
+import WishlistPage from '../pages/WishlistPage';
 import ArtisanDashboard from '../features/artisan-dashboard';
 import NotFound from '../pages/NotFound';
 import { Login, Signup, OAuthCallback } from '../pages/auth';
@@ -15,15 +16,17 @@ import AuthDebugPanel from '../components/AuthDebugPanel';
 import { AdminAuthProvider } from '../contexts';
 import { AuthProvider } from '../contexts/AuthContext';
 import { CartProvider } from '../contexts/CartContext';
+import { WishlistProvider } from '../contexts/WishlistContext';
 
 
 const AppRouter: React.FC = () => {
   return (
     <AuthProvider>
       <CartProvider>
-        <AdminAuthProvider>
-          <Router>
-          <Routes>
+        <WishlistProvider>
+          <AdminAuthProvider>
+            <Router>
+            <Routes>
             
             {/* Authentication Routes */}
             <Route path="/login" element={<Login />} />
@@ -52,6 +55,11 @@ const AppRouter: React.FC = () => {
             {/* Marketplace Routes */}
             <Route path="/" element={<Marketplace />} />
             <Route path="/search" element={<SearchResults />} />
+            <Route path="/wishlist" element={
+              <ProtectedRoute allowedRoles={['customer', 'artisan', 'distributor']} redirectTo="/login">
+                <WishlistPage />
+              </ProtectedRoute>
+            } />
             <Route path="/marketplace" element={<Navigate to="/" replace />} />
             
             {/* Artisan Dashboard Routes */}
@@ -95,6 +103,7 @@ const AppRouter: React.FC = () => {
           <AuthDebugPanel />
         </Router>
       </AdminAuthProvider>
+      </WishlistProvider>
       </CartProvider>
     </AuthProvider>
   );

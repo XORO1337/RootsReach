@@ -38,6 +38,7 @@ router.delete('/items/:productId', ArtisanDashboardController.deleteProduct);
 
 // Orders management
 router.get('/orders', ArtisanDashboardController.getArtisanOrders);
+router.get('/deliveries', ArtisanDashboardController.getArtisanDeliveries);
 router.patch('/orders/:orderId/status', ArtisanDashboardController.updateOrderStatus);
 
 module.exports = router;

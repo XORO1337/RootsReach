@@ -31,6 +31,17 @@ router.post('/login', authLimit, validateUserLogin, AuthController.login);
 router.get('/google', AuthController.initiateGoogleAuth);
 router.get('/google/callback', AuthController.handleGoogleCallback);
 
+// Debug route to check user role (temporary)
+router.get('/debug/user-role/:email', async (req, res) => {
+  try {
+    const User = require('../models/User');
+    const user = await User.findOne({ email: req.params.email }).select('name email role');
+    res.json({ success: true, user });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // OTP routes
 router.post('/send-otp', otpLimit, validatePhoneOnly, AuthController.sendOTP);
 router.post('/resend-otp', otpLimit, validatePhoneOnly, AuthController.resendOTP);

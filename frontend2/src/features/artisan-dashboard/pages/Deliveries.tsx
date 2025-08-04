@@ -1,21 +1,78 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Search, Truck, Package, CheckCircle, MapPin } from 'lucide-react';
-import { Delivery } from '../types/dashboard';
+import { useArtisanDeliveries } from '../../../hooks/useArtisanDeliveries';
 
-interface DeliveriesProps {
-  deliveries: Delivery[];
-}
-
-const Deliveries: React.FC<DeliveriesProps> = ({ deliveries }) => {
+const Deliveries: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
+  const [isUpdating, setIsUpdating] = useState<string | null>(null);
 
-  const filteredDeliveries = deliveries.filter(delivery => {
-    const matchesSearch = delivery.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         delivery.id.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All Status' || delivery.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const { 
+    deliveries, 
+    isLoading, 
+    error, 
+    updateDeliveryStatus, 
+    getDeliveryStats,
+    fetchDeliveries 
+  } = useArtisanDeliveries();
+
+  const deliveryStats = getDeliveryStats();
+
+  // Transform backend data to match frontend expectations
+  const transformedDeliveries = useMemo(() => {
+    return deliveries.map(delivery => ({
+      id: delivery._id,
+      orderId: delivery.orderNumber,
+      customer: {
+        name: delivery.buyerId.name,
+        phone: delivery.buyerId.phone || delivery.buyerId.email || 'N/A'
+      },
+      items: delivery.items.map(item => `${item.productId.name} (${item.quantity}x)`).join(', '),
+      address: `${delivery.shippingAddress.street}, ${delivery.shippingAddress.city}, ${delivery.shippingAddress.state} ${delivery.shippingAddress.postalCode}`,
+      status: delivery.status === 'processing' ? 'Preparing' : 
+              delivery.status === 'shipped' ? 'Shipped' : 
+              delivery.status === 'delivered' ? 'Delivered' : 'Preparing',
+      progress: delivery.status === 'processing' ? 25 :
+                delivery.status === 'shipped' ? 75 :
+                delivery.status === 'delivered' ? 100 : 25,
+      estimatedDelivery: delivery.estimatedDelivery || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      trackingNumber: delivery.trackingNumber,
+      totalAmount: delivery.totalAmount,
+      createdAt: delivery.createdAt
+    }));
+  }, [deliveries]);
+
+  const filteredDeliveries = useMemo(() => {
+    if (!transformedDeliveries) return [];
+    
+    return transformedDeliveries.filter(delivery => {
+      const matchesSearch = delivery.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           delivery.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           delivery.orderId.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'All Status' || delivery.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [transformedDeliveries, searchTerm, statusFilter]);
+
+  const handleStatusUpdate = async (deliveryId: string, newStatus: string, trackingNumber?: string) => {
+    try {
+      setIsUpdating(deliveryId);
+      
+      // Map frontend status to backend status
+      const backendStatus = newStatus === 'Preparing' ? 'processing' :
+                           newStatus === 'Shipped' ? 'shipped' :
+                           newStatus === 'Delivered' ? 'delivered' : 'processing';
+      
+      await updateDeliveryStatus(deliveryId, backendStatus, trackingNumber);
+      
+      // Refresh the deliveries list
+      await fetchDeliveries();
+    } catch (error) {
+      console.error('Failed to update delivery status:', error);
+    } finally {
+      setIsUpdating(null);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -35,10 +92,41 @@ const Deliveries: React.FC<DeliveriesProps> = ({ deliveries }) => {
     }
   };
 
-  const totalDeliveries = deliveries.length;
-  const preparingDeliveries = deliveries.filter(d => d.status === 'Preparing').length;
-  const inTransitDeliveries = deliveries.filter(d => d.status === 'Shipped').length;
-  const deliveredCount = deliveries.filter(d => d.status === 'Delivered').length;
+  if (isLoading) {
+    return (
+      <div className="p-6 flex justify-center items-center">
+        <div className="flex items-center space-x-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+          <span className="text-gray-600">Loading deliveries...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error loading deliveries</h3>
+              <p className="mt-1 text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const totalDeliveries = deliveryStats.total;
+  const preparingDeliveries = deliveryStats.preparing;
+  const inTransitDeliveries = deliveryStats.shipped;
+  const deliveredCount = deliveryStats.delivered;
 
   return (
     <div className="p-6">
@@ -177,13 +265,24 @@ const Deliveries: React.FC<DeliveriesProps> = ({ deliveries }) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       {delivery.status === 'Shipped' && delivery.trackingNumber && (
-                        <button className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600">
-                          Mark Delivered
+                        <button 
+                          onClick={() => handleStatusUpdate(delivery.id, 'Delivered')}
+                          disabled={isUpdating === delivery.id}
+                          className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isUpdating === delivery.id ? 'Updating...' : 'Mark Delivered'}
                         </button>
                       )}
                       {delivery.status === 'Preparing' && (
-                        <button className="bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600">
-                          Ship
+                        <button 
+                          onClick={() => {
+                            const trackingNumber = `TRK${Date.now()}${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+                            handleStatusUpdate(delivery.id, 'Shipped', trackingNumber);
+                          }}
+                          disabled={isUpdating === delivery.id}
+                          className="bg-orange-500 text-white px-3 py-1 rounded text-xs hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isUpdating === delivery.id ? 'Shipping...' : 'Ship'}
                         </button>
                       )}
                       {delivery.trackingNumber && (

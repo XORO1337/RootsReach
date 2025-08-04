@@ -1,4 +1,5 @@
 const Order = require('../models/Orders');
+const Product = require('../models/Product');
 
 class OrderService {
   // Create a new order
@@ -6,25 +7,65 @@ class OrderService {
     try {
       const { buyer, items, shippingAddress, status = 'pending' } = orderData;
 
-      // Calculate total amount
-      const totalAmount = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      // First, get product details to ensure we have valid artisanId
+      const itemsWithArtisans = [];
+      for (const item of items) {
+        const product = await Product.findById(item.id).populate('artisanId', '_id name');
+        if (!product) {
+          throw new Error(`Product with ID ${item.id} not found`);
+        }
+        if (!product.artisanId) {
+          throw new Error(`Product ${product.name} does not have a valid artisan`);
+        }
+        
+        itemsWithArtisans.push({
+          ...item,
+          artisanId: product.artisanId._id,
+          productId: product._id
+        });
+      }
 
-      const order = new Order({
-        buyer,
-        items: items.map(item => ({
-          productId: item.id,
-          productName: item.name,
-          quantity: item.quantity,
-          pricePerUnit: item.price,
-          artisanId: item.artisanId
-        })),
-        totalAmount,
-        shippingAddress,
-        status,
-        orderDate: new Date()
-      });
+      // Group items by artisan to create separate orders for each artisan
+      const itemsByArtisan = itemsWithArtisans.reduce((acc, item) => {
+        const artisanId = item.artisanId.toString();
+        if (!acc[artisanId]) {
+          acc[artisanId] = [];
+        }
+        acc[artisanId].push(item);
+        return acc;
+      }, {});
 
-      return await order.save();
+      const createdOrders = [];
+
+      // Create separate orders for each artisan
+      for (const [artisanId, artisanItems] of Object.entries(itemsByArtisan)) {
+        // Calculate total amount for this artisan's items
+        const totalAmount = artisanItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+        // Generate unique order number for each artisan
+        const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+        const order = new Order({
+          orderNumber,
+          buyerId: buyer,
+          artisanId: artisanId,
+          items: artisanItems.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.price
+          })),
+          totalAmount,
+          shippingAddress,
+          status
+        });
+
+        const savedOrder = await order.save();
+        createdOrders.push(savedOrder);
+      }
+
+      // Return the first order (or you could return all orders)
+      // For now, return the first order to maintain compatibility
+      return createdOrders[0];
     } catch (error) {
       throw new Error(`Error creating order: ${error.message}`);
     }
@@ -37,7 +78,7 @@ class OrderService {
       let query = {};
 
       if (filters.status) query.status = filters.status;
-      if (filters.buyerId) query.buyer = filters.buyerId;
+      if (filters.buyerId) query.buyerId = filters.buyerId;
       if (filters.minAmount) query.totalAmount = { $gte: filters.minAmount };
       if (filters.maxAmount) {
         query.totalAmount = { ...query.totalAmount, $lte: filters.maxAmount };
@@ -72,14 +113,25 @@ class OrderService {
     try {
       const skip = (page - 1) * limit;
       
-      const orders = await Order.find({ 'items.artisanId': artisanId })
-        .sort({ orderDate: -1 })
+      const orders = await Order.find({ artisanId: artisanId })
+        .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate('buyer', 'name email phone')
+        .populate('buyerId', 'name email phone')
         .populate('items.productId');
 
-      return orders;
+      const total = await Order.countDocuments({ artisanId: artisanId });
+
+      return {
+        orders,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalOrders: total,
+          hasNext: page < Math.ceil(total / limit),
+          hasPrev: page > 1
+        }
+      };
     } catch (error) {
       throw new Error(`Error getting artisan orders: ${error.message}`);
     }

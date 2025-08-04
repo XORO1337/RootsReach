@@ -1,7 +1,8 @@
 import React from 'react';
 import { Product } from '../types';
-import { Star, MapPin, ShoppingCart, Eye } from 'lucide-react';
+import { Star, MapPin, ShoppingCart, Eye, Heart } from 'lucide-react';
 import { formatWeightUnit } from '../utils/formatters';
+import { useWishlist } from '../contexts/WishlistContext';
 
 interface ProductCardProps {
   product: Product;
@@ -18,6 +19,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
   onViewSeller,
   viewMode = 'grid'
 }) => {
+  const { isInWishlist, toggleWishlistItem } = useWishlist();
+  const isWishlisted = isInWishlist(product.id);
+
+  const handleWishlistToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent triggering other click events
+    try {
+      await toggleWishlistItem(product.id);
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+    }
+  };
   if (viewMode === 'list') {
     return (
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
@@ -34,6 +46,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
                 {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
               </div>
             )}
+            {/* Wishlist Heart Icon */}
+            <button
+              onClick={handleWishlistToggle}
+              className="absolute top-2 right-2 p-2 bg-white/90 rounded-full shadow-sm hover:bg-white transition-all duration-200 z-10"
+            >
+              <Heart 
+                className={`h-4 w-4 transition-colors ${
+                  isWishlisted 
+                    ? 'text-red-500 fill-red-500' 
+                    : 'text-gray-400 hover:text-red-500'
+                }`} 
+              />
+            </button>
             {!product.inStock && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <span className="text-white font-semibold text-sm">Out of Stock</span>
@@ -154,7 +179,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
             {Math.round((1 - product.price / product.originalPrice) * 100)}% OFF
           </div>
         )}
-        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="absolute top-3 right-3 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Wishlist Heart Icon */}
+          <button
+            onClick={handleWishlistToggle}
+            className="bg-white/90 p-2 rounded-full hover:bg-white transition-colors"
+          >
+            <Heart 
+              className={`h-4 w-4 transition-colors ${
+                isWishlisted 
+                  ? 'text-red-500 fill-red-500' 
+                  : 'text-gray-700 hover:text-red-500'
+              }`} 
+            />
+          </button>
+          {/* View Details Icon */}
           <button
             onClick={() => onViewDetails(product)}
             className="bg-white/90 p-2 rounded-full hover:bg-white transition-colors"

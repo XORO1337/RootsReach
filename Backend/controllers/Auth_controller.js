@@ -129,7 +129,7 @@ class AuthController {
   // Login with phone number or email
   static async login(req, res) {
     try {
-      const { phone, email, password } = req.body;
+      const { phone, email, password, role } = req.body;
 
       // Find user by phone or email
       const query = phone ? { phone } : { email };
@@ -165,7 +165,30 @@ class AuthController {
         await user.resetLoginAttempts();
       }
 
-      // Generate tokens
+      // Handle role change if requested
+      let roleChanged = false;
+      if (role && role !== user.role && ['customer', 'artisan', 'distributor'].includes(role)) {
+        console.log(`🔄 Role change requested: ${user.role} -> ${role} for user ${user.email}`);
+        
+        // Update user role
+        const oldRole = user.role;
+        user.role = role;
+        roleChanged = true;
+
+        // Create role-specific profile if changing to artisan or distributor
+        if (role === 'artisan' || role === 'distributor') {
+          try {
+            await AuthController.createRoleSpecificProfile(user._id, role, {});
+            console.log(`✅ Created ${role} profile for user ${user.email}`);
+          } catch (error) {
+            console.log(`ℹ️ Profile creation skipped - may already exist for user ${user.email}`);
+          }
+        }
+
+        console.log(`✅ Role changed from ${oldRole} to ${role} for user ${user.email}`);
+      }
+
+      // Generate tokens with the current (possibly updated) role
       const accessToken = generateAccessToken({ userId: user._id, role: user.role });
       const refreshToken = generateRefreshToken({ userId: user._id });
 
@@ -184,7 +207,7 @@ class AuthController {
 
       res.json({
         success: true,
-        message: 'Login successful',
+        message: roleChanged ? `Login successful - Role updated to ${user.role}` : 'Login successful',
         data: {
           user: {
             id: user._id,
@@ -196,7 +219,8 @@ class AuthController {
             isPhoneVerified: user.isPhoneVerified,
             isIdentityVerified: user.isIdentityVerified
           },
-          accessToken
+          accessToken,
+          roleChanged
         }
       });
 
@@ -223,8 +247,12 @@ class AuthController {
       console.log('🎯 OAuth Initiation - Using default role: customer');
     }
     
+    // Also include role in state parameter as fallback
+    const state = JSON.stringify({ role: req.session.selectedRole });
+    
     passport.authenticate('google', {
-      scope: ['profile', 'email']
+      scope: ['profile', 'email'],
+      state: state
     })(req, res, next);
   }
 
@@ -242,37 +270,80 @@ class AuthController {
 
       try {
         // Check if role was pre-selected during OAuth initiation
-        const selectedRole = req.session?.selectedRole || 'customer';
-        console.log('🎯 OAuth Callback - Selected Role:', selectedRole);
+        let selectedRole = req.session?.selectedRole || 'customer';
+        
+        // Also check state parameter as fallback
+        if (req.query.state) {
+          try {
+            const stateData = JSON.parse(req.query.state);
+            if (stateData.role) {
+              selectedRole = stateData.role;
+              console.log('🎯 OAuth Callback - Role found in state parameter:', selectedRole);
+            }
+          } catch (e) {
+            console.log('🎯 OAuth Callback - Could not parse state parameter');
+          }
+        }
+        
+        console.log('🎯 OAuth Callback - Selected Role from session:', req.session?.selectedRole);
+        console.log('🎯 OAuth Callback - Final selected role:', selectedRole);
+        console.log('🎯 OAuth Callback - Session object:', req.session);
         console.log('🎯 OAuth Callback - User is new:', user._isNewUser);
         console.log('🎯 OAuth Callback - Current user role:', user.role);
+        console.log('🎯 OAuth Callback - Query params:', req.query);
         
         // Always try to create/verify role-specific profile
         if (selectedRole === 'artisan' || selectedRole === 'distributor') {
           try {
-            await AuthController.createRoleSpecificProfile(user._id, selectedRole, {
+            const defaultProfileData = {
               region: 'Default Region', // Provide a default region for artisans
               skills: [], // Empty skills array for artisans
-              businessName: '', // Empty business details for distributors
+              businessName: 'New Business', // Provide a default business name for distributors
               licenseNumber: '',
               distributionAreas: []
-            });
+            };
+            await AuthController.createRoleSpecificProfile(user._id, selectedRole, defaultProfileData);
           } catch (profileErr) {
             console.error('Failed to create role-specific profile:', profileErr);
+            console.error('Profile error details:', profileErr.message);
             return res.redirect(`${process.env.CLIENT_URL}/auth/callback?error=profile_creation_failed`);
           }
         }
         
         // Update user role if it was selected (for both new and existing users)
-        if (selectedRole && selectedRole !== 'customer') {
-          console.log('🔄 Updating user role from', user.role, 'to', selectedRole);
-          user.role = selectedRole;
-          await user.save();
-          
-          // Create role-specific profile for new users with non-customer roles
-          if (user._isNewUser && (selectedRole === 'artisan' || selectedRole === 'distributor')) {
-            await AuthController.createRoleSpecificProfile(user._id, selectedRole, {});
+        console.log('🔄 About to update user role. Selected:', selectedRole, 'Current:', user.role);
+        if (selectedRole && ['customer', 'artisan', 'distributor'].includes(selectedRole)) {
+          if (user.role !== selectedRole) {
+            console.log('🔄 Updating user role from', user.role, 'to', selectedRole);
+            user.role = selectedRole;
+            
+            // Mark as modified to ensure save
+            user.markModified('role');
+            await user.save();
+            
+            console.log('✅ User role updated successfully. New role:', user.role);
+            
+            // Create role-specific profile for new users with non-customer roles
+            if (user._isNewUser && (selectedRole === 'artisan' || selectedRole === 'distributor')) {
+              try {
+                const defaultProfileData = {
+                  region: 'Default Region',
+                  skills: [],
+                  businessName: 'New Business', // Provide default business name for distributors
+                  licenseNumber: '',
+                  distributionAreas: []
+                };
+                await AuthController.createRoleSpecificProfile(user._id, selectedRole, defaultProfileData);
+                console.log('✅ Role-specific profile created for new user');
+              } catch (profileErr) {
+                console.error('❌ Failed to create role-specific profile:', profileErr);
+              }
+            }
+          } else {
+            console.log('ℹ️ User role already matches selected role:', selectedRole);
           }
+        } else {
+          console.log('⚠️ Invalid or missing selected role, keeping current role:', user.role);
         }
 
         // Generate tokens with enhanced payload
@@ -293,6 +364,10 @@ class AuthController {
         user.lastLogin = new Date();
         await user.save();
 
+        // Fetch fresh user data from database to ensure we have the latest role
+        const freshUser = await User.findById(user._id);
+        console.log('🔍 Fresh user data from DB - Role:', freshUser.role);
+
         // Set HTTP-only cookie for refresh token
         res.cookie('refreshToken', refreshToken, {
           httpOnly: true,
@@ -303,19 +378,19 @@ class AuthController {
 
         // Redirect to frontend OAuth callback with token and user data
         const userData = {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isEmailVerified: user.isEmailVerified,
-          isPhoneVerified: user.isPhoneVerified,
-          authProvider: user.authProvider
+          id: freshUser._id,
+          name: freshUser.name,
+          email: freshUser.email,
+          role: freshUser.role,
+          isEmailVerified: freshUser.isEmailVerified,
+          isPhoneVerified: freshUser.isPhoneVerified,
+          authProvider: freshUser.authProvider
         };
 
         console.log('🎯 Final user data being sent to frontend:', userData);
         console.log('🎯 User role before redirect:', userData.role);
         
-        const callbackUrl = `${process.env.CLIENT_URL}/auth/callback?token=${accessToken}&user=${encodeURIComponent(JSON.stringify(userData))}&role=${user.role}`;
+        const callbackUrl = `${process.env.CLIENT_URL}/auth/callback?token=${accessToken}&user=${encodeURIComponent(JSON.stringify(userData))}&role=${freshUser.role}`;
         console.log('🔗 Redirecting to:', callbackUrl);
         res.redirect(callbackUrl);
 
@@ -673,15 +748,28 @@ class AuthController {
         headers: req.headers
       });
       
-      const { name, email, password, role, bio, region, skills, businessName, licenseNumber, distributionAreas } = req.body;
+      const { name, email, password, phoneNumber, role, bio, region, skills, businessName, licenseNumber, distributionAreas } = req.body;
 
       // Check if user already exists
-      const existingUser = await User.findOne({ email });
+      const existingUser = await User.findOne({ 
+        $or: [
+          { email: email },
+          ...(phoneNumber ? [{ phone: phoneNumber }] : [])
+        ]
+      });
       if (existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: 'User with this email already exists'
-        });
+        if (existingUser.email === email) {
+          return res.status(400).json({
+            success: false,
+            message: 'User with this email already exists'
+          });
+        }
+        if (existingUser.phone === phoneNumber) {
+          return res.status(400).json({
+            success: false,
+            message: 'User with this phone number already exists'
+          });
+        }
       }
 
       // Create user
@@ -689,9 +777,11 @@ class AuthController {
         name,
         email,
         password,
+        phone: phoneNumber, // Map phoneNumber to phone
         role: role || 'customer',
         authProvider: 'local',
-        isEmailVerified: false
+        isEmailVerified: false,
+        isPhoneVerified: false
       });
 
       await user.save();
@@ -730,9 +820,11 @@ class AuthController {
           userId: user._id,
           name: user.name,
           email: user.email,
+          phone: user.phone,
           role: user.role,
           accessToken,
-          isEmailVerified: user.isEmailVerified
+          isEmailVerified: user.isEmailVerified,
+          isPhoneVerified: user.isPhoneVerified
         }
       });
 
@@ -785,7 +877,7 @@ class AuthController {
         console.log('Creating new distributor profile for user:', userId);
         const distributorProfile = new Distributor({
           userId,
-          businessName: profileData.businessName || '',
+          businessName: profileData.businessName || 'New Business', // Provide default if empty
           licenseNumber: profileData.licenseNumber || '',
           distributionAreas: profileData.distributionAreas || []
         });

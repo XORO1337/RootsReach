@@ -19,6 +19,7 @@ const inventoryRoutes = require('./routes/Inventory_route');
 const backupRoutes = require('./routes/Backup_route');
 const devLogsRoutes = require('./routes/DevLogs_route');
 const adminRoutes = require('./routes/Admin_route');
+const wishlistRoutes = require('./routes/Wishlist_route');
 
 // Import middleware
 const { generalLimit } = require('./middleware/rateLimiting');
@@ -143,6 +144,9 @@ app.use('/api/dev', devLogsRoutes);
 
 console.log('Defining admin routes...');
 app.use('/api/admin', adminRoutes);
+
+console.log('Defining wishlist routes...');
+app.use('/api/wishlist', wishlistRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

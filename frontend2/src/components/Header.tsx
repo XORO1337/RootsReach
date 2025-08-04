@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Menu, X, Heart, User, LogOut } from 'lucide-react';
 import { FilterState } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useWishlist } from '../contexts/WishlistContext';
 
 interface HeaderProps {
   cartItemsCount: number;
@@ -16,7 +17,10 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState(filters.search || '');
   const { user, logout } = useAuth();
+  const { getWishlistItemsCount } = useWishlist();
   const navigate = useNavigate();
+
+  const wishlistItemsCount = getWishlistItemsCount();
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -114,10 +118,18 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
           <div className="flex items-center space-x-2">
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center space-x-1">
-              <button className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200">
+              <Link
+                to="/wishlist"
+                className="relative flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-all duration-200"
+              >
                 <Heart className="h-5 w-5" />
                 <span className="text-sm font-medium">Wishlist</span>
-              </button>
+                {wishlistItemsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                    {wishlistItemsCount > 99 ? '99+' : wishlistItemsCount}
+                  </span>
+                )}
+              </Link>
               
               <div className="relative">
                 <button 
@@ -242,10 +254,19 @@ const Header: React.FC<HeaderProps> = ({ cartItemsCount, onCartToggle, filters, 
         <div className="lg:hidden bg-white border-t border-gray-200 shadow-lg">
           <div className="px-4 py-6 space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <button className="flex items-center justify-center space-x-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+              <Link
+                to="/wishlist"
+                className="relative flex items-center justify-center space-x-2 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
                 <Heart className="h-5 w-5 text-gray-600" />
                 <span className="font-medium text-gray-700">Wishlist</span>
-              </button>
+                {wishlistItemsCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                    {wishlistItemsCount > 99 ? '99+' : wishlistItemsCount}
+                  </span>
+                )}
+              </Link>
               <div className="relative">
                 <button 
                   onClick={() => setShowUserMenu(!showUserMenu)}

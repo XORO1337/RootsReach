@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { CartItem } from '../types';
 import { X, Minus, Plus, ShoppingBag, Truck } from 'lucide-react';
 import { formatWeightUnit } from '../utils/formatters';
+import OrderService from '../services/orderService';
+import CheckoutModal from './CheckoutModal';
+import OrderConfirmationModal from './OrderConfirmationModal';
 
 interface CartProps {
   isOpen: boolean;
@@ -19,18 +22,50 @@ const Cart: React.FC<CartProps> = ({
   onRemoveItem
 }) => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [orderNumber, setOrderNumber] = useState('');
 
   const total = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCheckout = () => {
-    setIsCheckingOut(true);
-    // Simulate checkout process
-    setTimeout(() => {
-      alert('Order placed successfully! You will receive a confirmation email shortly.');
+    setShowCheckoutModal(true);
+  };
+
+  const handleOrderSubmit = async (shippingAddress: any) => {
+    try {
+      setIsCheckingOut(true);
+      
+      // Prepare order data
+      const orderData = {
+        items: items.map(item => ({
+          id: item.product.id,
+          name: item.product.name,
+          quantity: item.quantity,
+          price: item.product.price
+          // Remove artisanId - backend will fetch from product
+        })),
+        shippingAddress,
+        totalAmount: total
+      };
+
+      // Create order
+      const order = await OrderService.createOrder(orderData);
+      
+      setOrderNumber(order.orderNumber);
+      setShowCheckoutModal(false);
+      setShowConfirmationModal(true);
+      
+      // Clear cart after successful order
+      items.forEach(item => onRemoveItem(item.product.id));
+      
+    } catch (error) {
+      console.error('Order creation failed:', error);
+      alert('Failed to place order. Please try again.');
+    } finally {
       setIsCheckingOut(false);
-      onClose();
-    }, 2000);
+    }
   };
 
   if (!isOpen) return null;
@@ -151,6 +186,27 @@ const Cart: React.FC<CartProps> = ({
           )}
         </div>
       </div>
+
+      {/* Checkout Modal */}
+      <CheckoutModal
+        isOpen={showCheckoutModal}
+        onClose={() => setShowCheckoutModal(false)}
+        items={items}
+        totalAmount={total}
+        onSubmit={handleOrderSubmit}
+        isProcessing={isCheckingOut}
+      />
+
+      {/* Order Confirmation Modal */}
+      <OrderConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={() => {
+          setShowConfirmationModal(false);
+          onClose();
+        }}
+        orderNumber={orderNumber}
+        totalAmount={total}
+      />
     </div>
   );
 };

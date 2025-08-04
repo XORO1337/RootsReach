@@ -8,6 +8,8 @@ interface SignupFormData {
   fullName: string;
   email: string;
   password: string;
+  confirmPassword: string;
+  phoneNumber: string;
   role: 'customer' | 'artisan' | 'distributor';
   // Role-specific fields
   bio?: string;
@@ -25,11 +27,103 @@ const Signup: React.FC = () => {
     fullName: '',
     email: '',
     password: '',
+    confirmPassword: '',
+    phoneNumber: '',
     role: 'customer',
   });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+
+    // Name validation
+    if (!formData.fullName.trim()) {
+      errors.fullName = 'Full name is required';
+    } else if (formData.fullName.trim().length < 2) {
+      errors.fullName = 'Full name must be at least 2 characters long';
+    }
+
+    // Email validation
+    if (!formData.email) {
+      errors.email = 'Email address is required';
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      errors.password = 'Password must be at least 8 characters long';
+    } else if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(formData.password)) {
+      errors.password = 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character (@$!%*?&)';
+    }
+
+    // Confirm password validation
+    if (!formData.confirmPassword) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    // Phone number validation
+    if (!formData.phoneNumber) {
+      errors.phoneNumber = 'Phone number is required';
+    } else if (!/^[6-9]\d{9}$/.test(formData.phoneNumber)) {
+      errors.phoneNumber = 'Please enter a valid 10-digit Indian phone number';
+    }
+
+    // Role-specific validations
+    if (formData.role === 'artisan') {
+      if (!formData.region?.trim()) {
+        errors.region = 'Region is required for artisans';
+      }
+    } else if (formData.role === 'distributor') {
+      if (!formData.businessName?.trim()) {
+        errors.businessName = 'Business name is required for distributors';
+      }
+      if (!formData.distributionAreas?.trim()) {
+        errors.distributionAreas = 'Distribution areas are required for distributors';
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const parseBackendError = (errorMessage: string) => {
+    // Parse specific backend error messages
+    if (errorMessage.includes('User with this email already exists')) {
+      return 'An account with this email address already exists. Please try logging in instead.';
+    }
+    if (errorMessage.includes('User with this phone number already exists')) {
+      return 'An account with this phone number already exists. Please try logging in instead.';
+    }
+    if (errorMessage.includes('Password must contain')) {
+      return errorMessage; // Return the specific password validation message
+    }
+    if (errorMessage.includes('Please enter a valid email')) {
+      return 'The email address format is invalid. Please check and try again.';
+    }
+    if (errorMessage.includes('Please enter a valid phone number')) {
+      return 'The phone number format is invalid. Please check and try again.';
+    }
+    if (errorMessage.includes('validation failed')) {
+      return 'Please check your information and ensure all required fields are properly filled.';
+    }
+    if (errorMessage.includes('Network Error') || errorMessage.includes('Failed to fetch')) {
+      return 'Network connection error. Please check your internet connection and try again.';
+    }
+    if (errorMessage.includes('profile_creation_failed')) {
+      return 'Account created but profile setup failed. Please contact support or try logging in.';
+    }
+    
+    return errorMessage; // Return original message if no specific handling
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -37,7 +131,14 @@ const Signup: React.FC = () => {
       ...prev,
       [name]: value,
     }));
+    // Clear errors when user starts typing
     if (error) setError('');
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
   const handleRoleChange = (role: 'customer' | 'artisan' | 'distributor') => {
@@ -45,6 +146,8 @@ const Signup: React.FC = () => {
       fullName: prev.fullName,
       email: prev.email,
       password: prev.password,
+      confirmPassword: prev.confirmPassword,
+      phoneNumber: prev.phoneNumber,
       role,
       // Clear role-specific fields when changing role
       bio: '',
@@ -54,18 +157,29 @@ const Signup: React.FC = () => {
       licenseNumber: '',
       distributionAreas: '',
     }));
+    // Clear validation errors when changing role
+    setValidationErrors({});
+    setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setValidationErrors({});
+
+    // Validate form before submitting
+    if (!validateForm()) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const payload: any = {
         name: formData.fullName,
         email: formData.email,
         password: formData.password,
+        phoneNumber: formData.phoneNumber,
         role: formData.role,
       };
 
@@ -119,11 +233,20 @@ const Signup: React.FC = () => {
           navigate('/');
         }
       } else {
-        setError(data.message || 'Registration failed. Please try again.');
+        const errorMessage = parseBackendError(data.message || 'Registration failed. Please try again.');
+        setError(errorMessage);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
-      setError('An error occurred during registration. Please try again.');
+      let errorMessage = 'An error occurred during registration. Please try again.';
+      
+      if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        errorMessage = 'Network connection error. Please check your internet connection and try again.';
+      } else if (error.message) {
+        errorMessage = parseBackendError(error.message);
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -253,9 +376,16 @@ const Signup: React.FC = () => {
               value={formData.fullName}
               onChange={handleInputChange}
               placeholder="Enter your full name"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50 focus:bg-white"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${
+                validationErrors.fullName 
+                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+              }`}
               required
             />
+            {validationErrors.fullName && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.fullName}</p>
+            )}
           </div>
 
           {/* Email Field */}
@@ -270,9 +400,16 @@ const Signup: React.FC = () => {
               value={formData.email}
               onChange={handleInputChange}
               placeholder="Enter your email address"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50 focus:bg-white"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${
+                validationErrors.email 
+                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+              }`}
               required
             />
+            {validationErrors.email && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
+            )}
           </div>
 
           {/* Password Field */}
@@ -288,7 +425,11 @@ const Signup: React.FC = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Enter your password"
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50 focus:bg-white"
+                className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${
+                  validationErrors.password 
+                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+                }`}
                 required
               />
               <button
@@ -299,6 +440,72 @@ const Signup: React.FC = () => {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            {validationErrors.password && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.password}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Must contain at least 8 characters with uppercase, lowercase, number, and special character
+            </p>
+          </div>
+
+          {/* Confirm Password Field */}
+          <div>
+            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
+              Confirm Password
+            </label>
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleInputChange}
+                placeholder="Confirm your password"
+                className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${
+                  validationErrors.confirmPassword 
+                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+                }`}
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
+            {validationErrors.confirmPassword && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.confirmPassword}</p>
+            )}
+          </div>
+
+          {/* Phone Number Field */}
+          <div>
+            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              id="phoneNumber"
+              name="phoneNumber"
+              value={formData.phoneNumber}
+              onChange={handleInputChange}
+              placeholder="Enter your 10-digit phone number"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${
+                validationErrors.phoneNumber 
+                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+              }`}
+              required
+            />
+            {validationErrors.phoneNumber && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.phoneNumber}</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Enter a valid 10-digit Indian phone number
+            </p>
           </div>
 
           {/* Role-specific fields */}

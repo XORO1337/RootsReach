@@ -1,10 +1,42 @@
 const express = require('express');
 const OrderController = require('../controllers/Order_controller.js');
 const { authenticateToken } = require('../middleware/auth');
+const { validateOrderCreation } = require('../middleware/validation');
 const router = express.Router();
 
 // Order creation and management
-router.post('/', authenticateToken, OrderController.createOrder);
+router.post('/', authenticateToken, validateOrderCreation, OrderController.createOrder);
+
+// Test route for order creation (temporary)
+router.post('/test-create', async (req, res) => {
+  try {
+    const OrderService = require('../services/Order_serv');
+    const testOrderData = {
+      buyer: '507f1f77bcf86cd799439011', // Mock buyer ID
+      items: [
+        {
+          id: '507f1f77bcf86cd799439012', // Mock product ID
+          name: 'Test Product',
+          quantity: 2,
+          price: 100,
+          artisanId: '507f1f77bcf86cd799439013' // Mock artisan ID
+        }
+      ],
+      shippingAddress: {
+        street: '123 Test St',
+        city: 'Test City',
+        state: 'Test State',
+        country: 'Test Country',
+        postalCode: '123456'
+      }
+    };
+    
+    const order = await OrderService.createOrder(testOrderData);
+    res.json({ success: true, order, message: 'Test order created successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // Search and filter routes (must come before ID-based routes)
 router.get('/search', authenticateToken, OrderController.searchOrders);

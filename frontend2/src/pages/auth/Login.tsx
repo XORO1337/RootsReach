@@ -15,6 +15,55 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
+
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+
+    // Email validation
+    if (!formData.email) {
+      errors.email = 'Email address is required';
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    // Password validation
+    if (!formData.password) {
+      errors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      errors.password = 'Password must be at least 6 characters long';
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const parseBackendError = (errorMessage: string) => {
+    // Parse specific backend error messages
+    if (errorMessage.includes('Invalid credentials') || errorMessage.includes('Invalid email or password')) {
+      return 'The email or password you entered is incorrect. Please check and try again.';
+    }
+    if (errorMessage.includes('User not found') || errorMessage.includes('No user found with this email')) {
+      return 'No account found with this email address. Please check your email or sign up for a new account.';
+    }
+    if (errorMessage.includes('Account is locked') || errorMessage.includes('temporarily locked')) {
+      return 'Your account has been temporarily locked due to multiple failed login attempts. Please try again later or contact support.';
+    }
+    if (errorMessage.includes('Email not verified')) {
+      return 'Please verify your email address before logging in. Check your inbox for a verification email.';
+    }
+    if (errorMessage.includes('Account suspended') || errorMessage.includes('Account disabled')) {
+      return 'Your account has been suspended. Please contact support for assistance.';
+    }
+    if (errorMessage.includes('Network Error') || errorMessage.includes('Failed to fetch')) {
+      return 'Network connection error. Please check your internet connection and try again.';
+    }
+    if (errorMessage.includes('Server Error') || errorMessage.includes('Internal Server Error')) {
+      return 'Server error occurred. Please try again in a few minutes.';
+    }
+    
+    return errorMessage; // Return original message if no specific handling
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -22,13 +71,29 @@ const Login: React.FC = () => {
       ...prev,
       [name]: value
     }));
+    // Clear general error and field-specific validation error
     if (error) setError('');
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    // Clear previous errors
     setError('');
+    setValidationErrors({});
+
+    // Validate form
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
 
     try {
       const response = await fetch(buildApiUrl(API_CONFIG.ENDPOINTS.AUTH.LOGIN), {
@@ -40,7 +105,8 @@ const Login: React.FC = () => {
         credentials: 'include', // Include cookies for JWT
         body: JSON.stringify({
           email: formData.email,
-          password: formData.password
+          password: formData.password,
+          role: formData.role
         }),
       });
 
@@ -49,6 +115,11 @@ const Login: React.FC = () => {
 
       if (data.success) {
         console.log('🔍 Login Debug - User role from backend:', data.data.user.role);
+        
+        // Show role change notification if applicable
+        if (data.data.roleChanged) {
+          console.log('🔄 Role changed during login to:', data.data.user.role);
+        }
         
         // Use the auth context to manage user state
         const userData = {
@@ -81,11 +152,13 @@ const Login: React.FC = () => {
             navigate('/');
         }
       } else {
-        setError(data.message || 'Login failed. Please check your credentials.');
+        const errorMessage = parseBackendError(data.message || 'Login failed. Please check your credentials.');
+        setError(errorMessage);
       }
     } catch (error) {
       console.error('Login error:', error);
-      setError('An error occurred during login. Please try again.');
+      const errorMessage = parseBackendError('Network error occurred. Please check your connection and try again.');
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -156,9 +229,16 @@ const Login: React.FC = () => {
               value={formData.email}
               onChange={handleInputChange}
               placeholder="Enter your email address"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50 focus:bg-white"
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${
+                validationErrors.email 
+                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                  : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+              }`}
               required
             />
+            {validationErrors.email && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.email}</p>
+            )}
           </div>
 
           {/* Password Field */}
@@ -174,7 +254,11 @@ const Login: React.FC = () => {
                 value={formData.password}
                 onChange={handleInputChange}
                 placeholder="Enter your password"
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors bg-gray-50 focus:bg-white"
+                className={`w-full px-4 py-3 pr-12 border rounded-lg focus:outline-none focus:ring-2 transition-colors bg-gray-50 focus:bg-white ${
+                  validationErrors.password 
+                    ? 'border-red-300 focus:ring-red-500 focus:border-red-500' 
+                    : 'border-gray-300 focus:ring-orange-500 focus:border-orange-500'
+                }`}
                 required
               />
               <button
@@ -185,15 +269,18 @@ const Login: React.FC = () => {
                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
+            {validationErrors.password && (
+              <p className="mt-1 text-sm text-red-600">{validationErrors.password}</p>
+            )}
           </div>
 
           {/* Role Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">
-              For Google Sign-In, I want to join as:
+              I want to login as:
             </label>
             <p className="text-xs text-gray-500 mb-3">
-              Note: This selection only applies to Google OAuth. For email login, your existing account role will be used.
+              Note: You can change your role during login. If you select a different role than your original signup, your account will be updated accordingly.
             </p>
             <div className="grid grid-cols-1 gap-3">
               {/* Customer Role */}
@@ -210,7 +297,7 @@ const Login: React.FC = () => {
                   <User className={`h-5 w-5 ${formData.role === 'customer' ? 'text-orange-500' : 'text-gray-400'}`} />
                   <div>
                     <div className="font-medium text-gray-900">Customer</div>
-                    <div className="text-sm text-gray-500">Browse and purchase handmade crafts</div>
+                    <div className="text-sm text-gray-500">Login to browse and purchase handmade crafts</div>
                   </div>
                 </div>
               </button>
@@ -229,7 +316,7 @@ const Login: React.FC = () => {
                   <Palette className={`h-5 w-5 ${formData.role === 'artisan' ? 'text-orange-500' : 'text-gray-400'}`} />
                   <div>
                     <div className="font-medium text-gray-900">Artisan</div>
-                    <div className="text-sm text-gray-500">Sell your handmade crafts and manage orders</div>
+                    <div className="text-sm text-gray-500">Login to manage your crafts and orders</div>
                   </div>
                 </div>
               </button>
@@ -248,7 +335,7 @@ const Login: React.FC = () => {
                   <Package className={`h-5 w-5 ${formData.role === 'distributor' ? 'text-orange-500' : 'text-gray-400'}`} />
                   <div>
                     <div className="font-medium text-gray-900">Distributor</div>
-                    <div className="text-sm text-gray-500">Manage inventory and distribute products</div>
+                    <div className="text-sm text-gray-500">Login to manage inventory and distribution</div>
                   </div>
                 </div>
               </button>

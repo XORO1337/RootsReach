@@ -139,8 +139,10 @@ const validateAddress = [
     .withMessage('District can only contain letters and spaces'),
     
   body('pinCode')
+    .isLength({ min: 6, max: 6 })
+    .withMessage('Pin code must be exactly 6 digits')
     .matches(/^\d{6}$/)
-    .withMessage('Pin code must be a 6-digit number'),
+    .withMessage('Pin code must contain only digits'),
     
   body('isDefault')
     .optional()
@@ -279,6 +281,66 @@ const validateSearch = [
   handleValidationErrors
 ];
 
+// Order creation validation
+const validateOrderCreation = [
+  body('items')
+    .isArray({ min: 1 })
+    .withMessage('Order must contain at least one item'),
+    
+  body('items.*.id')
+    .isMongoId()
+    .withMessage('Invalid product ID'),
+    
+  body('items.*.quantity')
+    .isInt({ min: 1 })
+    .withMessage('Quantity must be a positive integer'),
+    
+  body('items.*.price')
+    .isFloat({ min: 0 })
+    .withMessage('Price must be a positive number'),
+    
+  body('shippingAddress.street')
+    .trim()
+    .notEmpty()
+    .withMessage('Street address is required'),
+    
+  body('shippingAddress.city')
+    .trim()
+    .notEmpty()
+    .withMessage('City is required')
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage('City can only contain letters and spaces'),
+    
+  body('shippingAddress.state')
+    .trim()
+    .notEmpty()
+    .withMessage('State is required')
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage('State can only contain letters and spaces'),
+    
+  body('shippingAddress.country')
+    .trim()
+    .notEmpty()
+    .withMessage('Country is required')
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage('Country can only contain letters and spaces'),
+    
+  body('shippingAddress.postalCode')
+    .trim()
+    .notEmpty()
+    .withMessage('Postal code is required')
+    .isLength({ min: 6, max: 6 })
+    .withMessage('Postal code must be exactly 6 digits')
+    .matches(/^\d{6}$/)
+    .withMessage('Postal code must contain only digits'),
+    
+  body('totalAmount')
+    .isFloat({ min: 0 })
+    .withMessage('Total amount must be a positive number'),
+    
+  handleValidationErrors
+];
+
 module.exports = {
   validateUserRegistration,
   validateUserLogin,
@@ -293,5 +355,6 @@ module.exports = {
   validatePasswordChange,
   validateObjectId,
   validateSearch,
+  validateOrderCreation,
   handleValidationErrors
 };

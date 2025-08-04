@@ -45,7 +45,20 @@ const rawMaterialOrderSchema = new Schema({
     city: { type: String, required: true, trim: true },
     state: { type: String, required: true, trim: true },
     country: { type: String, required: true, trim: true },
-    postalCode: { type: String, required: true, trim: true }
+    postalCode: { 
+      type: String, 
+      required: true, 
+      trim: true,
+      validate: {
+        validator: function(value) {
+          // Ensure exactly 6 digits, no more, no less
+          return /^\d{6}$/.test(value) && value.length === 6;
+        },
+        message: 'Postal code must be exactly 6 digits'
+      },
+      minlength: [6, 'Postal code must be exactly 6 digits'],
+      maxlength: [6, 'Postal code must be exactly 6 digits']
+    }
   },
   paymentStatus: {
     type: String,

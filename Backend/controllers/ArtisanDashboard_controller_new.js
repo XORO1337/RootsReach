@@ -353,7 +353,7 @@ class ArtisanDashboardController {
     try {
       const artisanId = req.user.id;
       const { orderId } = req.params;
-      const { status } = req.body;
+      const { status, trackingNumber, estimatedDelivery } = req.body;
 
       // Get artisan profile
       const artisan = await ArtisanService.getArtisanProfileByUserId(artisanId);
@@ -373,12 +373,36 @@ class ArtisanDashboardController {
         });
       }
 
+      // Build update object
+      const updateData = { 
+        status, 
+        updatedAt: new Date() 
+      };
+
+      // Add tracking number if provided (usually when shipping)
+      if (trackingNumber) {
+        updateData.trackingNumber = trackingNumber;
+      }
+
+      // Add estimated delivery if provided
+      if (estimatedDelivery) {
+        updateData.estimatedDelivery = new Date(estimatedDelivery);
+      }
+
+      // Auto-set estimated delivery for shipped orders if not provided
+      if (status === 'shipped' && !estimatedDelivery && !updateData.estimatedDelivery) {
+        const deliveryDate = new Date();
+        deliveryDate.setDate(deliveryDate.getDate() + 7); // 7 days from now
+        updateData.estimatedDelivery = deliveryDate;
+      }
+
       // Update order
       const order = await Order.findOneAndUpdate(
         { _id: orderId, artisanId: artisan._id },
-        { status, updatedAt: new Date() },
+        updateData,
         { new: true }
-      ).populate('customerId', 'name email phone');
+      ).populate('buyerId', 'name email phone')
+       .populate('items.productId', 'name price');
 
       if (!order) {
         return res.status(404).json({
@@ -525,6 +549,68 @@ class ArtisanDashboardController {
       res.status(500).json({
         success: false,
         message: 'Failed to delete product',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
+      });
+    }
+  }
+
+  // Get artisan deliveries (orders with processing, shipped, or delivered status)
+  static async getArtisanDeliveries(req, res) {
+    try {
+      const artisanId = req.user.id;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const status = req.query.status;
+
+      // Get artisan profile
+      const artisan = await ArtisanService.getArtisanProfileByUserId(artisanId);
+      if (!artisan) {
+        return res.status(404).json({
+          success: false,
+          message: 'Artisan profile not found'
+        });
+      }
+
+      // Build query for delivery-relevant statuses
+      const query = { 
+        artisanId: artisan._id,
+        status: { $in: ['processing', 'shipped', 'delivered'] }
+      };
+      
+      if (status && ['processing', 'shipped', 'delivered'].includes(status)) {
+        query.status = status;
+      }
+
+      // Get orders with pagination
+      const skip = (page - 1) * limit;
+      const orders = await Order.find(query)
+        .populate('buyerId', 'name email phone')
+        .populate('items.productId', 'name price')
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+
+      const totalOrders = await Order.countDocuments(query);
+
+      res.status(200).json({
+        success: true,
+        message: 'Artisan deliveries retrieved successfully',
+        data: {
+          orders,
+          pagination: {
+            currentPage: page,
+            totalPages: Math.ceil(totalOrders / limit),
+            totalOrders,
+            limit
+          }
+        }
+      });
+
+    } catch (error) {
+      console.error('Get artisan deliveries error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Failed to retrieve artisan deliveries',
         error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
       });
     }
